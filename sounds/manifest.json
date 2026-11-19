@@ -1,0 +1,256 @@
+{
+ "kits": {
+  "dusty": [
+   {
+    "name": "KICK",
+    "file": "01-kick.wav"
+   },
+   {
+    "name": "SNARE",
+    "file": "02-snare.wav"
+   },
+   {
+    "name": "HAT",
+    "file": "03-hat.wav"
+   },
+   {
+    "name": "OPEN HAT",
+    "file": "04-open-hat.wav"
+   },
+   {
+    "name": "KICK 2",
+    "file": "05-kick-2.wav"
+   },
+   {
+    "name": "RIM",
+    "file": "06-rim.wav"
+   },
+   {
+    "name": "SNAP",
+    "file": "07-snap.wav"
+   },
+   {
+    "name": "SHAKER",
+    "file": "08-shaker.wav"
+   },
+   {
+    "name": "LOW TOM",
+    "file": "09-low-tom.wav"
+   },
+   {
+    "name": "HIGH TOM",
+    "file": "10-high-tom.wav"
+   },
+   {
+    "name": "CONGA",
+    "file": "11-conga.wav"
+   },
+   {
+    "name": "RIDE",
+    "file": "12-ride.wav"
+   },
+   {
+    "name": "SUB",
+    "file": "13-sub.wav"
+   },
+   {
+    "name": "KEYS",
+    "file": "14-keys.wav"
+   },
+   {
+    "name": "VOX AH",
+    "file": "15-vox-ah.wav"
+   },
+   {
+    "name": "SCRATCH",
+    "file": "16-scratch.wav"
+   }
+  ],
+  "club": [
+   {
+    "name": "KICK",
+    "file": "01-kick.wav"
+   },
+   {
+    "name": "CLAP",
+    "file": "02-clap.wav"
+   },
+   {
+    "name": "HAT",
+    "file": "03-hat.wav"
+   },
+   {
+    "name": "OPEN HAT",
+    "file": "04-open-hat.wav"
+   },
+   {
+    "name": "KICK 2",
+    "file": "05-kick-2.wav"
+   },
+   {
+    "name": "SNARE",
+    "file": "06-snare.wav"
+   },
+   {
+    "name": "RIM",
+    "file": "07-rim.wav"
+   },
+   {
+    "name": "SHAKER",
+    "file": "08-shaker.wav"
+   },
+   {
+    "name": "CONGA LO",
+    "file": "09-conga-lo.wav"
+   },
+   {
+    "name": "CONGA HI",
+    "file": "10-conga-hi.wav"
+   },
+   {
+    "name": "COWBELL",
+    "file": "11-cowbell.wav"
+   },
+   {
+    "name": "RIDE",
+    "file": "12-ride.wav"
+   },
+   {
+    "name": "BASS",
+    "file": "13-bass.wav"
+   },
+   {
+    "name": "ORGAN",
+    "file": "14-organ.wav"
+   },
+   {
+    "name": "VOX OH",
+    "file": "15-vox-oh.wav"
+   },
+   {
+    "name": "RISER",
+    "file": "16-riser.wav"
+   }
+  ],
+  "midnight": [
+   {
+    "name": "808 KICK",
+    "file": "01-808-kick.wav"
+   },
+   {
+    "name": "SNARE",
+    "file": "02-snare.wav"
+   },
+   {
+    "name": "HAT",
+    "file": "03-hat.wav"
+   },
+   {
+    "name": "OPEN HAT",
+    "file": "04-open-hat.wav"
+   },
+   {
+    "name": "PUNCH KICK",
+    "file": "05-punch-kick.wav"
+   },
+   {
+    "name": "CLAP",
+    "file": "06-clap.wav"
+   },
+   {
+    "name": "SNAP",
+    "file": "07-snap.wav"
+   },
+   {
+    "name": "PERC",
+    "file": "08-perc.wav"
+   },
+   {
+    "name": "808 TOM",
+    "file": "09-808-tom.wav"
+   },
+   {
+    "name": "808 TOM HI",
+    "file": "10-808-tom-hi.wav"
+   },
+   {
+    "name": "IMPACT",
+    "file": "11-impact.wav"
+   },
+   {
+    "name": "CRASH",
+    "file": "12-crash.wav"
+   },
+   {
+    "name": "808 BASS",
+    "file": "13-808-bass.wav"
+   },
+   {
+    "name": "DARK STAB",
+    "file": "14-dark-stab.wav"
+   },
+   {
+    "name": "VOX OO",
+    "file": "15-vox-oo.wav"
+   },
+   {
+    "name": "ZAP",
+    "file": "16-zap.wav"
+   }
+  ]
+ },
+ "inst": {
+  "ep": [
+   45,
+   57,
+   69
+  ],
+  "sub": [
+   33,
+   45
+  ],
+  "b808": [
+   28,
+   40
+  ],
+  "upright": [
+   33,
+   45
+  ],
+  "sawbass": [
+   33,
+   45
+  ],
+  "pluck": [
+   57,
+   69,
+   81
+  ],
+  "organ": [
+   57,
+   69
+  ],
+  "pad": [
+   45,
+   57,
+   69
+  ],
+  "bell": [
+   69,
+   81
+  ],
+  "flute": [
+   69,
+   81
+  ],
+  "vox": [
+   57,
+   69
+  ]
+ },
+ "fx": [
+  "vinyl",
+  "riser",
+  "impact"
+ ]
+}

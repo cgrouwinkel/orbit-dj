@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="en" class="theme-grunge">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0a0e">
+<meta name="description" content="ORBIT DJ: learn to DJ by playing a rhythm game. Free and open source.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ORBIT DJ">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<title>ORBIT DJ</title>
+<script>
+  // Apply saved theme + motion preference before first paint (no flash). v1 theme key kept.
+  (function () { var h = document.documentElement; try { var t = localStorage.getItem('orbitArcadeTheme'); h.className = t === 'aero' ? 'theme-aero' : 'theme-grunge'; var m = localStorage.getItem('orbitV2Motion'); if (m === '"reduce"' || (m === null && window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) h.classList.add('reduce-motion'); } catch (e) {} })();
+</script>
+<link rel="stylesheet" href="css/orbit.css">
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.5v15l12.5-7.5z"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><path d="M6 4.5h4.2v15H6zM13.8 4.5H18v15h-4.2z"/></symbol>
+  <symbol id="i-retry" viewBox="0 0 24 24"><path d="M12 4.5V1.6L7.2 5.8 12 10V7a5 5 0 1 1-5 5H4.4A7.6 7.6 0 1 0 12 4.5z"/></symbol>
+  <symbol id="i-pads" viewBox="0 0 24 24"><path d="M3 3h8v8H3zM13 3h8v8h-8zM3 13h8v8H3zM13 13h8v8h-8z"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 2.5l2.9 6.2 6.8.7-5.1 4.6 1.5 6.7L12 17.3l-6.1 3.4 1.5-6.7L2.3 9.4l6.8-.7z"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 6h9v2H4zM17 6h3v2h-3zM13 4h4v6h-4zM4 16h3v2H4zM11 16h9v2h-9zM7 14h4v6H7z"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1.2 15h-2.4v-6.5h2.4zm-1.2-8.3a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><path d="M7 10V7a5 5 0 0 1 10 0v3h1.5v11h-13V10zm2.4 0h5.2V7a2.6 2.6 0 0 0-5.2 0z"/></symbol>
+  <symbol id="i-rec" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/></symbol>
+  <symbol id="i-loop" viewBox="0 0 24 24"><path d="M7 7h9.2L14 4.8 15.4 3.4 20 8l-4.6 4.6L14 11.2 16.2 9H7a3 3 0 0 0-3 3H2a5 5 0 0 1 5-5zm10 10H7.8l2.2 2.2-1.4 1.4L4 16l4.6-4.6 1.4 1.4L7.8 15H17a3 3 0 0 0 3-3h2a5 5 0 0 1-5 5z"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M9 3h6l1 2h4v2H4V5h4zM6 9h12l-1 12H7z"/></symbol>
+  <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 2l4.5 4.5-1.4 1.4L13 5.8V15h-2V5.8L8.9 7.9 7.5 6.5zM5 11h3v2H6v7h12v-7h-2v-2h3v11H5z"/></symbol>
+  <symbol id="i-import" viewBox="0 0 24 24"><path d="M11 3h2v9.2l2.1-2.1 1.4 1.4L12 16l-4.5-4.5 1.4-1.4 2.1 2.1zM5 14h2v5h10v-5h2v7H5z"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M5.6 4.2L12 10.6l6.4-6.4 1.4 1.4-6.4 6.4 6.4 6.4-1.4 1.4-6.4-6.4-6.4 6.4-1.4-1.4 6.4-6.4-6.4-6.4z"/></symbol>
+  <symbol id="i-speaker" viewBox="0 0 24 24"><path d="M3 9h4l5-4v14l-5-4H3zM15 8.5a5 5 0 0 1 0 7l-1.4-1.4a3 3 0 0 0 0-4.2zm2.8-2.8a9 9 0 0 1 0 12.6l-1.4-1.4a7 7 0 0 0 0-9.8z"/></symbol>
+  <symbol id="i-headphones" viewBox="0 0 24 24"><path d="M12 3a9 9 0 0 0-9 9v7a2 2 0 0 0 2 2h3v-8H5v-1a7 7 0 0 1 14 0v1h-3v8h3a2 2 0 0 0 2-2v-7a9 9 0 0 0-9-9z"/></symbol>
+</svg>
+
+<div id="app">
+  <header class="topbar">
+    <button class="brand" data-view="career" aria-label="ORBIT DJ career map"><span class="logo">ORBIT</span><span class="logo-tag">DJ</span></button>
+    <div class="nowplaying" aria-live="polite"><span class="np-venue" id="np-venue">VENUE 01 · BEDROOM DJ</span><span class="np-song" id="np-song">The First Groove</span></div>
+    <div class="hud" aria-label="Score">
+      <div class="hud-score"><small>SCORE</small><b id="hud-score">000000</b></div>
+      <div class="hud-cell hud-combo"><small>COMBO</small><b id="hud-combo">0</b><em id="hud-mult">×1</em></div>
+      <div class="hud-cell"><small>ACC</small><b id="hud-acc">—</b></div>
+      <div class="hud-stars" id="hud-stars" aria-label="0 of 3 stars"><svg><use href="#i-star"/></svg><svg><use href="#i-star"/></svg><svg><use href="#i-star"/></svg></div>
+    </div>
+    <nav class="tabs" role="tablist" aria-label="Sections">
+      <button class="tab is-active" role="tab" aria-selected="true" data-view="play"><svg><use href="#i-play"/></svg><span>Play</span></button>
+      <button class="tab" role="tab" aria-selected="false" data-view="pads"><svg><use href="#i-pads"/></svg><span>Beats</span></button>
+      <button class="tab" role="tab" aria-selected="false" data-view="career"><svg><use href="#i-star"/></svg><span>Career</span></button>
+      <button class="tab" role="tab" aria-selected="false" data-view="settings"><svg><use href="#i-sliders"/></svg><span>Setup</span></button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- PLAY -->
+    <section class="view view-play is-active" id="view-play" aria-label="Play">
+      <aside class="deck deck-left" aria-label="Transport">
+        <button class="btn-start" id="btn-start"><svg><use href="#i-play"/></svg><span id="start-label">START SET</span></button>
+        <div class="btn-row">
+          <button class="btn" id="btn-stop" disabled><svg><use href="#i-x"/></svg><span>STOP</span></button>
+          <button class="btn" id="btn-retry"><svg><use href="#i-retry"/></svg><span>RETRY</span></button>
+        </div>
+        <div class="progress" role="progressbar" aria-label="Set progress" aria-valuemin="0" aria-valuemax="100"><i id="progress"></i></div>
+        <div class="field">
+          <span class="field-label">DIFFICULTY</span>
+          <div class="seg seg-diff" role="radiogroup" aria-label="Difficulty">
+            <button role="radio" data-diff="easy">ROOKIE</button><button role="radio" data-diff="normal">CLUB</button><button role="radio" data-diff="expert">HEAD&shy;LINER</button>
+          </div>
+        </div>
+        <label class="field field-inline only-roomy"><span class="field-label">BACKING</span>
+          <select id="style-select" class="select">
+            <option value="auto">Match venue</option><option value="boombap">Dusty boom bap</option><option value="jazzhop">Lo-fi jazz hop</option><option value="house">Deep house</option><option value="garage">UK garage</option><option value="melodic">Melodic electronic</option><option value="dark">Dark bass</option>
+          </select>
+        </label>
+        <div class="mini-mix only-roomy">
+          <label class="mini-fader"><span>MUSIC</span><input type="range" min="0" max="100" data-level="music" aria-label="Music level"><output data-level-out="music"></output></label>
+          <label class="mini-fader"><span>PADS</span><input type="range" min="0" max="100" data-level="pads" aria-label="Pad level"><output data-level-out="pads"></output></label>
+        </div>
+        <div class="live-stats only-tall" aria-label="This set">
+          <div class="ls-perfect"><b id="ls-perfect">0</b><small>PERFECT</small></div><div class="ls-great"><b id="ls-great">0</b><small>GREAT</small></div><div><b id="ls-good">0</b><small>GOOD</small></div>
+          <div class="ls-miss"><b id="ls-miss">0</b><small>MISS</small></div><div><b id="ls-off">0</b><small>OFF BEAT</small></div><div><b id="ls-max">0</b><small>MAX COMBO</small></div>
+        </div>
+        <div class="keys-legend only-tall"><kbd>F</kbd> <kbd>J</kbd> <kbd>K</kbd> <kbd>L</kbd> hit lanes · <kbd>Space</kbd> start / pause · <kbd>1</kbd>–<kbd>8</kbd> sampler pads</div>
+      </aside>
+
+      <div class="stage" id="stage">
+        <div class="highway-wrap" id="highway-wrap">
+          <canvas id="highway" aria-label="Four-lane note highway. Tap a lane or its pad when a note reaches the line."></canvas>
+          <div class="judgment" id="judgment" aria-hidden="true"><b></b><small></small></div>
+          <div class="stage-msg" id="stage-msg"></div>
+        </div>
+        <div class="lane-pads" id="lane-pads"></div>
+      </div>
+
+      <aside class="deck deck-right" id="mixer" aria-label="DJ mixer">
+        <div class="deck-head">
+          <span class="deck-title">MIXER</span><span class="unlock-tag" id="unlock-tag">LEVEL 1</span>
+          <button class="icon-btn" id="btn-brief" aria-label="Equipment briefing"><svg><use href="#i-info"/></svg></button>
+        </div>
+        <canvas class="spectrum" id="spectrum" aria-label="Live frequency spectrum of the backing track"></canvas>
+        <div class="spectrum-bands" aria-hidden="true"><span>BASS</span><span>MIDS</span><span>HIGHS</span></div>
+        <div class="ctrl ctrl-buttons" data-ctrl="cue">
+          <button class="btn btn-cue" id="btn-cue"><svg><use href="#i-headphones"/></svg>CUE</button>
+          <button class="btn btn-deck" id="btn-deck"><svg><use href="#i-play"/></svg><span id="deck-label">PLAY</span></button>
+        </div>
+        <div class="ctrl fader" data-ctrl="xf">
+          <div class="fader-top"><span>CROSSFADER</span><output id="xf-out">CENTER</output></div>
+          <input type="range" id="xf" min="0" max="100" value="50" data-default="50" aria-label="Crossfader: melody to bass">
+          <div class="fader-ends"><span>MELODY</span><span>BASS</span></div>
+        </div>
+        <div class="ctrl fader" data-ctrl="eq">
+          <div class="fader-top"><span>LOW EQ</span><output id="eq-out">100%</output></div>
+          <input type="range" id="low-eq" min="0" max="150" value="100" data-default="100" aria-label="Low EQ (bass) level">
+        </div>
+        <div class="ctrl fader" data-ctrl="filter">
+          <div class="fader-top"><span>FILTER</span><output id="filter-out">OPEN</output></div>
+          <input type="range" id="filter" min="0" max="1000" value="1000" data-default="1000" aria-label="Low-pass filter cutoff">
+        </div>
+        <div class="teaser" id="teaser"><svg><use href="#i-lock"/></svg><span id="teaser-text"></span></div>
+        <div class="challenge" id="challenge" aria-live="polite">
+          <div class="challenge-head"><span>EQUIPMENT</span><b id="ch-points">0 / 300</b></div>
+          <div class="meter"><i id="ch-fill"></i></div>
+          <div class="challenge-task" id="ch-task"></div>
+          <div class="challenge-fb" id="ctrl-feedback"></div>
+        </div>
+      </aside>
+    </section>
+
+    <!-- BEAT PAD -->
+    <section class="view view-pads" id="view-pads" aria-label="Beat pad">
+      <div class="mpc-pads" id="mpc-pads" aria-label="16 pads. Tap higher on a pad to play louder."></div>
+      <aside class="deck mpc-side" aria-label="Beat pad controls">
+        <div class="lcd" id="lcd">
+          <div class="lcd-row">
+            <select id="bp-kit" class="lcd-select" aria-label="Kit"></select>
+            <span class="lcd-chip" id="lcd-pat">PTN A · 1 BAR</span>
+            <span class="lcd-chip lcd-pos" id="lcd-pos">STOP</span>
+          </div>
+          <canvas class="lcd-grid" id="lcd-grid" aria-label="Pattern overview: 16 pads by 16 steps"></canvas>
+          <div class="lcd-status" id="bp-status" aria-live="polite"></div>
+        </div>
+        <div class="mpc-transport">
+          <button class="btn mpc-play" id="bp-play"><svg><use href="#i-play"/></svg><span>PLAY</span></button>
+          <button class="btn mpc-rec" id="bp-rec"><svg><use href="#i-rec"/></svg><span>REC</span></button>
+          <div class="bpm-box" aria-label="Tempo">
+            <button class="bpm-btn" id="bp-bpm-dn" aria-label="Tempo down">−</button>
+            <div class="bpm-read"><b id="bp-bpm">90</b><small>BPM</small></div>
+            <button class="bpm-btn" id="bp-bpm-up" aria-label="Tempo up">+</button>
+          </div>
+          <button class="btn mpc-nr" id="bp-nr" aria-label="Note repeat">NOTE RPT<small id="bp-nr-val">OFF</small></button>
+          <button class="btn mpc-full" id="bp-full">FULL<small>LEVEL</small></button>
+        </div>
+        <div class="mpc-tabs" role="tablist">
+          <button role="tab" data-bptab="steps" aria-selected="true">STEPS</button>
+          <button role="tab" data-bptab="pad" aria-selected="false">PAD</button>
+          <button role="tab" data-bptab="modes" aria-selected="false">MODES</button>
+          <button role="tab" data-bptab="file" aria-selected="false">FILE</button>
+        </div>
+        <div class="mpc-panel" data-bppanel="steps">
+          <div class="panel-row">
+            <span class="sel-pad" id="steps-pad">PAD 1 · KICK</span>
+            <div class="slots" id="bp-slots" role="radiogroup" aria-label="Pattern"></div>
+          </div>
+          <div class="step-strip" id="step-strip" aria-label="Steps for the selected pad"></div>
+          <div class="panel-row panel-btns">
+            <button class="btn btn-small" id="bp-len">1 BAR</button>
+            <button class="btn btn-small" id="bp-page" hidden>BAR 1</button>
+            <button class="btn btn-small" id="bp-undo">UNDO</button>
+            <button class="btn btn-small" id="bp-copy">COPY</button>
+            <button class="btn btn-small" id="bp-clear">CLEAR</button>
+          </div>
+        </div>
+        <div class="mpc-panel" data-bppanel="pad" hidden>
+          <div class="panel-row"><span class="sel-pad" id="pad-name">PAD 1 · KICK</span>
+            <div class="btn-pair"><button class="btn btn-small" id="pad-mute">MUTE</button><button class="btn btn-small" id="pad-solo">SOLO</button></div></div>
+          <label class="mini-fader wide"><span>LEVEL</span><input type="range" id="pad-level" min="0" max="150" data-default="100" aria-label="Pad level"><output id="pad-level-out"></output></label>
+          <label class="mini-fader wide"><span>TUNE</span><input type="range" id="pad-tune" min="-12" max="12" data-default="0" aria-label="Pad tune in semitones"><output id="pad-tune-out"></output></label>
+          <label class="mini-fader wide"><span>DECAY</span><input type="range" id="pad-decay" min="10" max="100" data-default="100" aria-label="Pad decay"><output id="pad-decay-out"></output></label>
+        </div>
+        <div class="mpc-panel" data-bppanel="modes" hidden>
+          <div class="mode-grid">
+            <button class="btn btn-small" data-bpmode="mute">MUTE MODE</button>
+            <button class="btn btn-small" data-bpmode="solo">SOLO MODE</button>
+            <button class="btn btn-small" data-bpmode="erase">ERASE</button>
+            <button class="btn btn-small" id="bp-16">16 LEVELS</button>
+            <button class="btn btn-small" id="bp-metro">METRO</button>
+            <button class="btn btn-small" id="bp-quant">SNAP 1/16</button>
+          </div>
+          <label class="mini-fader wide"><span>SWING</span><input type="range" id="bp-swing" min="50" max="75" data-default="50" aria-label="Swing"><output id="bp-swing-out"></output></label>
+          <div class="panel-row">
+            <button class="btn btn-small" id="bp-backing">BACKING</button>
+            <select id="bp-style" class="select" aria-label="Backing track style"></select>
+          </div>
+        </div>
+        <div class="mpc-panel" data-bppanel="file" hidden>
+          <div class="file-grid">
+            <button class="btn" id="bp-bounce"><svg><use href="#i-share"/></svg>BOUNCE WAV</button>
+            <button class="btn" id="bp-export"><svg><use href="#i-share"/></svg>EXPORT PATTERN</button>
+            <label class="btn"><svg><use href="#i-import"/></svg>IMPORT PATTERN<input type="file" id="bp-import" accept=".json,application/json" hidden></label>
+          </div>
+          <label class="switch"><input type="checkbox" id="bp-bounce-backing"><span class="switch-ui"></span><span>Include backing track in WAV</span></label>
+          <p class="note">WAV = 4 bars (or 2 loops of a 2-bar pattern) at your BPM, kit and pad settings. Patterns save automatically on this device.</p>
+        </div>
+      </aside>
+    </section>
+
+    <!-- CAREER -->
+    <section class="view view-career scroll" id="view-career" aria-label="Career">
+      <div class="career-head">
+        <div><div class="eyebrow">THE ROAD TO THE MAIN STAGE</div><h1 class="display">CAREER</h1></div>
+        <div class="totals">
+          <div><b id="tot-stars">0</b><small>STARS</small></div>
+          <div><b id="tot-best">0</b><small>PERSONAL BEST</small></div>
+          <div><b id="tot-cleared">0/4</b><small>VENUES CLEARED</small></div>
+        </div>
+      </div>
+      <div class="venue-grid" id="venue-grid"></div>
+      <div class="career-foot">
+        <div class="tip"><b>HOW TO PLAY</b>Notes fall down four lanes. They are the song’s real kick, snare, hat and FX hits, so tap the lane or its pad as each note crosses the line. Keys: F J K L, Space to start/pause, 1–8 for beat pads.</div>
+        <div class="tip"><b>HOW YOU’RE GRADED</b>Rhythm accuracy gives up to 700 points and equipment tasks up to 300. Grades: S 900+, A 750+, B 550+, C 350+.</div>
+        <div class="tip"><b>WHAT’S REAL</b>Timing is judged on the Web Audio clock. The backing tracks are original synthesized layers. The crossfader blends layers of one track; true two-deck mixing is on the roadmap.</div>
+      </div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section class="view view-settings scroll" id="view-settings" aria-label="Setup">
+      <div class="settings">
+        <div class="group">
+          <h2>Look</h2>
+          <div class="theme-pick" role="radiogroup" aria-label="Theme">
+            <button class="theme-card tc-grunge" role="radio" data-theme="grunge"><span class="tc-art"></span><b>GRUNGE ARCADE</b><small>Gritty, loud, neon</small></button>
+            <button class="theme-card tc-aero" role="radio" data-theme="aero"><span class="tc-art"></span><b>CYBER AERO</b><small>Glass, chrome, aqua</small></button>
+          </div>
+          <label class="switch"><input type="checkbox" id="set-motion"><span class="switch-ui"></span><span>Reduce motion</span></label>
+        </div>
+        <div class="group">
+          <h2>Mix</h2>
+          <label class="mini-fader wide"><span>MUSIC</span><input type="range" min="0" max="100" data-level="music"><output data-level-out="music"></output></label>
+          <label class="mini-fader wide"><span>PADS</span><input type="range" min="0" max="100" data-level="pads"><output data-level-out="pads"></output></label>
+          <label class="mini-fader wide"><span>SAMPLER</span><input type="range" min="0" max="100" data-level="sampler"><output data-level-out="sampler"></output></label>
+          <button class="btn" id="set-test"><svg><use href="#i-speaker"/></svg>Test sound</button>
+        </div>
+        <div class="group">
+          <h2>Gameplay</h2>
+          <div class="field"><span class="field-label">DIFFICULTY</span>
+            <div class="seg seg-diff" role="radiogroup" aria-label="Difficulty"><button role="radio" data-diff="easy">ROOKIE</button><button role="radio" data-diff="normal">CLUB</button><button role="radio" data-diff="expert">HEADLINER</button></div>
+          </div>
+          <div class="field"><span class="field-label">NOTE SPEED (VISUAL ONLY)</span>
+            <div class="seg" id="seg-speed" role="radiogroup" aria-label="Note speed"><button role="radio" data-speed="2.8">RELAXED</button><button role="radio" data-speed="2.2">NORMAL</button><button role="radio" data-speed="1.7">FAST</button></div>
+          </div>
+          <label class="field"><span class="field-label">BACKING TRACK</span>
+            <select id="set-style" class="select"><option value="auto">Match venue</option><option value="boombap">Dusty boom bap</option><option value="jazzhop">Lo-fi jazz hop</option><option value="house">Deep house</option><option value="garage">UK garage</option><option value="melodic">Melodic electronic</option><option value="dark">Dark bass</option></select>
+          </label>
+          <div class="field"><span class="field-label">GUIDE DRUMS (TIMING HELP)</span>
+            <div class="seg" id="seg-guide" role="radiogroup" aria-label="Guide drums"><button role="radio" data-guide="auto">AUTO</button><button role="radio" data-guide="on">ALWAYS</button><button role="radio" data-guide="off">OFF</button></div>
+          </div>
+          <div class="field"><span class="field-label">RHYTHM PAD SOUND</span>
+            <div class="seg" id="seg-padsound" role="radiogroup" aria-label="Rhythm pad sound"><button role="radio" data-padsound="drums">DRUMS</button><button role="radio" data-padsound="chops">MELODIC CHOPS</button></div>
+          </div>
+          <label class="field" id="chopbank-field"><span class="field-label">CHOP BANK</span>
+            <select id="set-chopbank" class="select"><option value="soul">Soul chops</option><option value="garage">Garage vox synth</option><option value="dark">Dark textures</option></select>
+          </label>
+        </div>
+        <div class="group">
+          <h2>Timing &amp; audio</h2>
+          <label class="mini-fader wide"><span>OFFSET</span><input type="range" id="set-offset" min="-300" max="300" step="1" aria-label="Timing offset in milliseconds"><output id="set-offset-out">0 ms</output></label>
+          <p class="note">Bluetooth headphones add delay. If hits feel late, run the tap test.</p>
+          <div class="btn-row"><button class="btn" id="set-calib"><svg><use href="#i-headphones"/></svg>Tap test</button><button class="btn" id="set-offset-reset">Reset</button></div>
+          <label class="switch"><input type="checkbox" id="set-silent"><span class="switch-ui"></span><span>Play with the iPhone silent switch on</span></label>
+          <div class="audio-status" id="audio-status"></div>
+          <button class="btn" id="set-restart-audio">Restart audio engine</button>
+        </div>
+        <div class="group">
+          <h2>App</h2>
+          <p class="note">Best on iPhone: Safari → Share → <b>Add to Home Screen</b>, then play in landscape.</p>
+          <button class="btn" id="set-intro">Show welcome screen</button>
+          <button class="btn btn-danger" id="set-reset">Reset career progress</button>
+          <p class="note" id="version-line"></p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Overlays -->
+  <div class="overlay" id="ov-intro" role="dialog" aria-modal="true" aria-labelledby="intro-title" hidden>
+    <div class="sheet sheet-intro">
+      <div class="intro-logo" id="intro-title"><span class="logo big">ORBIT</span><span class="logo-tag big">DJ</span></div>
+      <p class="intro-line">Learn to DJ by playing a game.<br>Become a DJ by mastering the game.</p>
+      <button class="btn-start" id="intro-play"><svg><use href="#i-play"/></svg><span>PLAY YOUR FIRST GROOVE</span></button>
+      <button class="link-btn" id="intro-skip">Look around first</button>
+      <p class="intro-small"><svg><use href="#i-headphones"/></svg>Sound on. Headphones help. Turn your phone sideways for the full controller.</p>
+    </div>
+  </div>
+
+  <div class="overlay" id="ov-brief" role="dialog" aria-modal="true" aria-labelledby="brief-name" hidden>
+    <div class="sheet sheet-brief">
+      <button class="icon-btn sheet-x" data-close aria-label="Close"><svg><use href="#i-x"/></svg></button>
+      <div class="eyebrow" id="brief-eyebrow">NEW EQUIPMENT</div>
+      <div class="brief-tabs" id="brief-tabs"></div>
+      <h2 class="display" id="brief-name"></h2>
+      <div class="brief-grid">
+        <div class="brief-block"><b>WHAT IT DOES</b><p id="brief-purpose"></p></div>
+        <div class="brief-block brief-hear"><b>HEAR IT</b><button class="btn" id="brief-demo"><svg><use href="#i-play"/></svg>Before / after</button><p id="brief-demo-note"></p></div>
+        <div class="brief-block"><b>PRO MOVE</b><p id="brief-practice"></p></div>
+        <div class="brief-block"><b>AVOID</b><ul id="brief-mistakes"></ul></div>
+        <div class="brief-block brief-challenge"><b>YOUR CHALLENGE</b><p id="brief-challenge"></p></div>
+      </div>
+      <div class="sheet-actions"><button class="btn" data-close>GOT IT</button><button class="btn-start small" id="brief-start"><svg><use href="#i-play"/></svg><span>START SET</span></button></div>
+    </div>
+  </div>
+
+  <div class="overlay" id="ov-results" role="dialog" aria-modal="true" aria-labelledby="res-grade" hidden>
+    <div class="sheet sheet-results">
+      <div class="res-left">
+        <div class="eyebrow" id="res-venue"></div>
+        <div class="res-grade" id="res-grade">A</div>
+        <div class="res-stars" id="res-stars"></div>
+        <div class="res-title" id="res-title"></div>
+      </div>
+      <div class="res-right">
+        <div class="res-score"><small>SCORE</small><b id="res-score">0</b><span class="badge" id="res-pb" hidden>NEW BEST</span></div>
+        <div class="res-bars">
+          <div><span>RHYTHM</span><b id="res-rhythm">0 / 700</b><div class="meter"><i id="res-rhythm-bar"></i></div></div>
+          <div><span>EQUIPMENT</span><b id="res-equip">0 / 300</b><div class="meter"><i id="res-equip-bar"></i></div></div>
+        </div>
+        <div class="res-counts" id="res-counts"></div>
+        <div class="sheet-actions">
+          <button class="btn" id="res-retry"><svg><use href="#i-retry"/></svg>RETRY</button>
+          <button class="btn" id="res-career"><svg><use href="#i-star"/></svg>CAREER</button>
+          <button class="btn-start small" id="res-next"><svg><use href="#i-play"/></svg><span>NEXT VENUE</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="ov-audio" role="dialog" aria-modal="true" aria-labelledby="audio-title" hidden>
+    <div class="sheet sheet-small">
+      <h2 class="display" id="audio-title">SOUND PAUSED</h2>
+      <p id="audio-msg">Your phone paused audio (a call, Siri, or switching apps). Tap to bring it back.</p>
+      <button class="btn-start" id="audio-resume"><svg><use href="#i-speaker"/></svg><span>TAP TO RESUME</span></button>
+    </div>
+  </div>
+
+  <div class="overlay" id="ov-calib" role="dialog" aria-modal="true" aria-labelledby="calib-title" hidden>
+    <div class="sheet sheet-small">
+      <button class="icon-btn sheet-x" data-close aria-label="Close"><svg><use href="#i-x"/></svg></button>
+      <h2 class="display" id="calib-title">TAP TEST</h2>
+      <p id="calib-msg">Listen, don’t look. Tap the big button on every click you hear. 12 clicks.</p>
+      <button class="calib-pad" id="calib-pad">TAP</button>
+      <div class="sheet-actions"><button class="btn" id="calib-go"><svg><use href="#i-play"/></svg>Start clicks</button></div>
+    </div>
+  </div>
+
+  <div class="overlay" id="ov-confirm" role="dialog" aria-modal="true" aria-labelledby="confirm-title" hidden>
+    <div class="sheet sheet-small">
+      <h2 class="display" id="confirm-title">RESET CAREER?</h2>
+      <p>This clears stars, personal bests and grades on this device. Settings stay.</p>
+      <div class="sheet-actions"><button class="btn" data-close>Cancel</button><button class="btn btn-danger" id="confirm-yes">Reset</button></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</div>
+
+<script src="js/util.js"></script>
+<script src="js/sounds-manifest.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/assets.js"></script>
+<script src="js/music.js"></script>
+<script src="js/game.js"></script>
+<script src="js/beatpad.js"></script>
+<script src="js/ui.js"></script>
+</body>
+</html>
