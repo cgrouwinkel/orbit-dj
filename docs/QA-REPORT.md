@@ -1,3 +1,19 @@
+# ORBIT DJ — QA report (v3.1.0)
+
+## v3.1.0 automated results: 105 / 105 (`tests/qa.js`) and 72 / 72 (`tests/qa-mix.js`)
+
+**Date:** 2026-11-19 · **Tested:** the repo root served locally, headless Chrome via Playwright. **Not tested:** Safari/WebKit, any physical device, and any listening by a person.
+
+New in v3.1 (`tests/qa.js`, "Music + charts"):
+- ✅ Not dull: every song has at least 3% of its energy above 4 kHz and 1.5% above 8 kHz. Measured: boom bap 6.6 / 2.6, chipmunk soul 6.6 / 2.3, trap 7.7 / 4.4, tech house 5.8 / 3.2, bass house 5.8 / 3.3, UK garage 4.5 / 2.2, dubstep 8.9 / 5.2 (% above 4 kHz / 8 kHz). The v3.0 house track measured 1.0 / 0.3.
+- ✅ Not boomy: under half of each song's energy below 60 Hz (highest: tech house 41.5%, trap 40.5%).
+- ✅ All 7 songs level-matched within 3 dB; peaks below −2 dBFS before the limiter; melody within 7 dB of the bass (dubstep closest at −6.4 dB, since its drop is mostly bass by design).
+- ✅ Seven deck tracks decode, and downbeats sit on the detected beat grid in every one.
+
+`tools/analyze_audio.py` reproduces these measurements on any rendered file.
+
+---
+
 # ORBIT DJ — QA report (v3.0.0 on top of the v2.2.0 and v2.1.0 reports)
 
 ## v3.0.0 automated results: 72 / 72 (Mix tab, school, trainer) and 103 / 103 (everything else)

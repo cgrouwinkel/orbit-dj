@@ -35,7 +35,7 @@ async function newPage(browser, viewport) {
     }
     return out;
   });
-  check('Six tracks load and decode', tracks.length === 6 && tracks.every(t => t.dur > 100 && t.dur < 140), tracks.map(t => t.id + ' ' + t.dur + 's'));
+  check('Seven tracks load and decode', tracks.length === 7 && tracks.every(t => t.dur > 100 && t.dur < 140), tracks.map(t => t.id + ' ' + t.dur + 's'));
   check('Beat 1 is found after the MP3 padding (0.04–0.12 s in)', tracks.every(t => t.first > 0.04 && t.first < 0.12), tracks.map(t => t.first));
   check('Downbeats in the drums-only mix-in sit on the detected beat grid (within 12 ms on average)', tracks.every(t => Math.abs(t.gridMs) <= 12), tracks.map(t => t.id + ' ' + t.gridMs + ' ms (worst ' + t.worstMs + ')'));
   check('Every track has a drums-only mix-in and mix-out and 8-bar phrasing', tracks.every(t => /^mixin>/.test(t.sections) && />mixout$/.test(t.sections) && t.bars % 8 === 0), tracks.map(t => t.sections)[0]);
@@ -76,7 +76,7 @@ async function newPage(browser, viewport) {
     return out;
   });
   check('Deck plays at 1.00× on the audio clock and makes sound', Math.abs(tr.rate1 - 1) < 0.01 && tr.level > 0.1, { rate: tr.rate1, level: tr.level });
-  check('Tempo fader: +10% plays 10% faster and reads 136.4 BPM', Math.abs(tr.rateFast - 1.1) < 0.012 && Math.abs(tr.bpmFast - 136.4) < 0.01, { rate: tr.rateFast, bpm: tr.bpmFast });
+  check('Tempo fader: +10% plays 10% faster and reads 136.4 BPM (124 × 1.1)', Math.abs(tr.rateFast - 1.1) < 0.012 && Math.abs(tr.bpmFast - 136.4) < 0.01, { rate: tr.rateFast, bpm: tr.bpmFast });
   check('CUE returns to the cue point and stops; holding CUE previews and snaps back', tr.cueBack && tr.previewPlays && tr.previewReturns, tr);
   check('SYNC matches tempo and lines the beats up within 5 ms, and stays locked', Math.abs(tr.bpmSync[0] - tr.bpmSync[1]) < 1e-6 && Math.abs(tr.phaseSync) < 5 && Math.abs(tr.phaseHeld) < 5, { before: tr.phaseBefore, after: tr.phaseSync, held: tr.phaseHeld });
   check('A synced deck follows the other deck’s tempo fader', tr.follows);
@@ -128,7 +128,7 @@ async function newPage(browser, viewport) {
       transport: [() => D.play(A), () => D.cueDown(A), async () => { D.cueDown(A); await wait(250); D.cueUp(A); }, () => D.play(A)],
       levels: [() => D.set(0, 'fader', 0), () => D.set(0, 'fader', 1), () => D.set(0, 'gain', 0.9), () => D.set(0, 'gain', 0.5)],
       xf: [() => D.setXf(1), () => D.setXf(0), () => D.setXf(0.5)],
-      tempo: [() => D.setTempo(B, (124 / 122 - 1) / D.RANGE)],
+      tempo: [() => D.setTempo(B, (D.bpm(A) / B.track.bpm - 1) / D.RANGE)],
       jog: [async () => { for (let i = 0; i < 80 && Math.abs(D.phaseMs()) > 12; i++) { D.nudge(B, D.phaseMs() > 0 ? 1 : -1); await wait(40); } D.nudge(B, 0); }, async () => { D.pause(B); await wait(120); D.jogStart(B); D.jog(B, 0.2, 0.05); D.jogEnd(B); }],
       sync: [() => D.toggleSync(B), () => D.toggleSync(B)],
       eq: [() => D.set(0, 'low', 0), () => D.set(0, 'low', 0.5), async () => { D.set(0, 'hi', 0); await wait(120); D.set(0, 'hi', 0.5); }, async () => { D.set(0, 'mid', 0); await wait(120); D.set(0, 'mid', 0.5); }, () => { D.set(0, 'low', 0); D.set(1, 'low', 0.5); }],

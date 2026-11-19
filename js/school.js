@@ -33,7 +33,7 @@
       { t: 'Now all the way to A.', ok: () => D.mixer.xf < 0.05 },
       { t: 'Rest it in the middle: both decks are in the mix.', ok: () => near(D.mixer.xf, 0.5, 0.06) }] },
     { id: 'tempo', name: 'TEMPO FADER', a: 'neon', b: 'glass', playA: true, steps: [
-      { t: 'Deck A plays at 124 BPM. Deck B’s track is 122. Slide B’s TEMPO fader until B also reads 124.0.', hold: 0.7, ok: (a, b) => !b.sync && Math.abs(D.bpm(b) - D.bpm(a)) < 0.12 }] },
+      { t: 'The two decks are at different tempos: compare the BPM readouts. Slide Deck B’s TEMPO fader until B reads the same as A.', hold: 0.7, ok: (a, b) => !b.sync && Math.abs(D.bpm(b) - D.bpm(a)) < 0.12 }] },
     { id: 'jog', name: 'JOG WHEEL + NUDGE', a: 'neon', b: 'glass', playA: true, playB: true, synced: true, offset: 0.3, steps: [
       { t: 'Same tempo, but B’s beats land late: you can hear a double kick. Drag B’s jog wheel forward (or hold +) to speed it up for a moment until the beat marks on the two waveforms line up.', hold: 1.5, ok: () => { const p = D.phaseMs(); return p !== null && Math.abs(p) < 28; } },
       { t: 'Locked in. Now pause Deck B and drag its jog wheel: on a stopped deck the platter scrubs through the track.', ok: (a, b, m) => { if (!b.playing && m.s0 === undefined) m.s0 = b.stats.scrubs; return !b.playing && b.stats.scrubs > m.s0; } }] },
@@ -129,11 +129,13 @@
 
   // ================= gigs: scored transitions =================
   const GIGS = [
-    { id: 'warmup', name: 'WARM-UP SLOT', a: 'glass', b: 'neon', sync: true, blurb: 'Melodic into deep house, 122 to 124 BPM. SYNC allowed.' },
-    { id: 'backroom', name: 'BACK ROOM', a: 'groove', b: 'bounce', sync: true, blurb: 'Boom bap into jazz hop, 88 to 92 BPM. Swung beats, SYNC allowed.' },
-    { id: 'peak', name: 'PEAK TIME', a: 'neon', b: 'tonic', sync: false, blurb: 'House into garage, 124 to 130 BPM. No SYNC: tempo fader and jog only.' },
-    { id: 'closing', name: 'CLOSING SET', a: 'tonic', b: 'final', sync: false, blurb: 'Garage into dark bass, 130 to 140 BPM. No SYNC, a big tempo jump.' }
+    { id: 'warmup', name: 'WARM-UP SLOT', a: 'glass', b: 'neon', sync: true, blurb: 'Bass house into tech house, 126 to 124 BPM. SYNC allowed.' },
+    { id: 'backroom', name: 'BACK ROOM', a: 'groove', b: 'bounce', sync: true, blurb: 'Boom bap into chipmunk soul, 88 to 94 BPM. Swung beats, SYNC allowed.' },
+    { id: 'peak', name: 'PEAK TIME', a: 'neon', b: 'tonic', sync: false, blurb: 'Tech house into UK garage, 124 to 132 BPM. No SYNC: tempo fader and jog only.' },
+    { id: 'closing', name: 'CLOSING SET', a: 'tonic', b: 'final', sync: false, blurb: 'UK garage into dubstep, 132 to 140 BPM. No SYNC, a big tempo jump.' },
+    { id: 'afterhours', name: 'AFTER HOURS', a: 'final', b: 'night', sync: true, blurb: 'Dubstep into trap, both at 140 BPM. The tempo is easy; the phrasing is the test.' }
   ];
+
   SC.GIGS = GIGS;
   SC.startGig = async function (id) {
     const def = GIGS.find(g => g.id === id); if (!def) return false;

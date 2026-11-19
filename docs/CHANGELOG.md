@@ -1,5 +1,44 @@
 # ORBIT DJ — Changelog
 
+## v3.1.0 — 2026-11-19 (new sound library and seven rewritten songs)
+
+### Why
+Feedback on v3.0: the music sounded like muffled elevator music. Measurement agreed: the v2/v3.0 library was generated at 32 kHz with most instruments stored at 22 kHz behind low-pass filters, so mixes had about 1% of their energy above 4 kHz and 0.3% above 8 kHz (centroid around 330 Hz on the house track). The parts were also polite: jazz-style chords and soft pads in every genre.
+
+### Sound library (all regenerated, all still synthesized in code, no samples from records)
+- Generated at 44.1 kHz; bright instruments stored at 44.1 kHz.
+- **Drums:** punchier kicks with beater knock and click, layered snares and claps with short rooms; the dusty kit goes through a 26 kHz / 12-bit early-sampler stage for crunch instead of being filtered dark.
+- **Basses:** tech-house pluck bass, bouncy FM "donk", reese, distorted 808 with glides, four dubstep growls (vowel "yoi", wobble, screech, tearing comb) with multiband upward compression.
+- **Keys and synths:** brighter additive piano, FM electric piano, vibes, supersaw, pluck, strings, brass section, bells, flute, choir.
+- **Vocals:** formant-synthesized sung syllables ("ah", "oh", "ee", "yeah", "hey", "oo") for vocal chops, with formant tuning so high notes keep their body, plus "chipmunk" versions (formants raised, fast vibrato) for sped-up-soul chops. No real singers, no recordings.
+
+### Songs (seven, each original, written in the production language of a genre)
+- **Tech house** (Neon Pressure): rolling offbeat bass riff, tops, pitched vocal hook, vocal chops that speed up through the build.
+- **Bass house** (Glass Horizon): bouncy donk bassline, chipmunk vocal chops, piano stabs.
+- **UK garage** (Two-Step Tonic): 2-step drums, pumping piano chords, chopped vocal phrase, sub and reese.
+- **Dubstep** (Final Frequency): melodic intro and build, then a half-time growl-bass call and response with a triplet run.
+- **Trap** (Night Shift): gliding 808s, hi-hat rolls, dark bell motif with choir, flute and brass.
+- **Dusty boom bap** (The First Groove): a jazzy "sample" of electric piano, vibes and flute chopped like a loop over swung, crunchy drums and upright bass.
+- **Chipmunk soul** (Basement Bounce): pitched-up vocal chops, piano, strings and horns over hard drums.
+- Mixing: tempo-synced echo bus for chops, high-passed reverb return, sidechain pumping on the four-on-the-floor styles, songs level-matched.
+
+### Game changes
+- Venues: Bedroom DJ = boom bap (88), House Party = chipmunk soul (100), Underground Club = tech house (126), Main Stage = dubstep (140). The style menu lists all seven.
+- Mix tab: seven tracks (added Night Shift, trap at 140), mastered to about −13 dBFS RMS, 160 kbps. A fifth gig, **After Hours** (dubstep into trap). The deck sampler's ZAP pad is now GROWL. Only the two lesson tracks are fetched ahead of time.
+- QA adds "not dull" (at least 3% of energy above 4 kHz and 1.5% above 8 kHz) and "not boomy" checks.
+
+### Results (measured on the rendered deck tracks)
+| | v3.0 | v3.1 |
+|---|---|---|
+| Energy above 8 kHz (house track) | 0.29% | 2.5% |
+| Spectral centroid (house track) | 331 Hz | 660 Hz |
+| Energy above 4 kHz (all seven tracks) | 1–6% | 4.7–9.4% |
+
+### Not yet verified
+- Nobody has listened to these songs yet. Measurements say they are no longer dull; whether they are good is the owner's call.
+- Synthesized vocals are syllables, not words, and still sound synthetic up close.
+- Still no iPhone or Safari testing.
+
 ## v3.0.0 — 2026-11-18 (two-deck controller, DJ school, beat trainer, rearranged songs)
 
 ### New: Mix tab — a full two-deck DJ controller

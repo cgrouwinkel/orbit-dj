@@ -10,10 +10,10 @@
   const O = window.ORBIT, E = O.engine, M = O.music, S = O.store, Synth = O.synth;
 
   const VENUES = [
-    { name: 'BEDROOM DJ', song: 'The First Groove', tag: 'Feel the pulse. Own the backbeat.', bpm: 88, style: 'boombap', teaches: 'Rhythm, downbeats, performance pads' },
-    { name: 'HOUSE PARTY', song: 'Basement Bounce', tag: 'Keep the groove moving.', bpm: 104, style: 'jazzhop', teaches: 'Cue, play/pause, crossfader blends' },
-    { name: 'UNDERGROUND CLUB', song: 'Neon Pressure', tag: 'Catch the syncopation.', bpm: 128, style: 'house', teaches: 'Low EQ and bass swaps' },
-    { name: 'MAIN STAGE', song: 'Final Frequency', tag: 'Everything comes together.', bpm: 140, style: 'dark', teaches: 'Filter sweeps and the full set' }
+    { name: 'BEDROOM DJ', song: 'The First Groove', tag: 'Dusty boom bap. Own the backbeat.', bpm: 88, style: 'boombap', teaches: 'Rhythm, downbeats, performance pads' },
+    { name: 'HOUSE PARTY', song: 'Basement Bounce', tag: 'Chipmunk soul. Keep the groove moving.', bpm: 100, style: 'soul', teaches: 'Cue, play/pause, crossfader blends' },
+    { name: 'UNDERGROUND CLUB', song: 'Neon Pressure', tag: 'Tech house. Catch the syncopation.', bpm: 126, style: 'house', teaches: 'Low EQ and bass swaps' },
+    { name: 'MAIN STAGE', song: 'Final Frequency', tag: 'Dubstep. Everything comes together.', bpm: 140, style: 'dubstep', teaches: 'Filter sweeps and the full set' }
   ];
   const DIFFS = { easy: { label: 'ROOKIE', window: 0.19 }, normal: { label: 'CLUB', window: 0.13 }, expert: { label: 'HEADLINER', window: 0.085 } };
   const LANES = [{ name: 'KICK', key: 'f' }, { name: 'SNARE', key: 'j' }, { name: 'HAT', key: 'k' }, { name: 'FX', key: 'l' }];
@@ -81,7 +81,7 @@
     VENUES, DIFFS, LANES, LESSONS, STAGE_LESSONS, STAGE_CONTROLS, CHALLENGES, DRILLS, DRILL_ORDER, barsFor,
     stage: O.clamp(Number(S.get('orbitV2Stage', 0)) || 0, 0, 3),
     difficulty: DIFFS[S.get('orbitV2Difficulty', 'easy')] ? S.get('orbitV2Difficulty', 'easy') : 'easy',
-    styleChoice: (v => (v === 'hiphop' ? 'boombap' : v === 'house' || v === 'dark' || v === 'auto' || window.ORBIT.music.STYLES[v] ? v : 'auto'))(S.get('orbitV2Style', 'auto')),
+    styleChoice: (v => (v === 'auto' || !v ? 'auto' : window.ORBIT.music.resolve(v)))(S.get('orbitV2Style', 'auto')),
     guideMode: S.get('orbitV2Guide', 'auto'),
     padSound: S.get('orbitV2PadSound', 'drums'),
     chopBank: S.get('orbitV2ChopBank', 'soul'),

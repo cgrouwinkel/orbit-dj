@@ -50,7 +50,7 @@ const autoPlay = page => page.evaluate(() => new Promise(res => {
     Object.values(S.kits).forEach(k => k.forEach(d => paths.push(d.path))); paths.push(...A.allInstPaths(), ...Object.values(S.fx));
     await A.ensure(paths); return { total: paths.length, decoded: paths.filter(p => A.get(p)).length };
   });
-  check('Every sound file loads and decodes (kits, instruments, fx, v1 chops)', lib.total === 137 && lib.decoded === lib.total, lib);
+  check('Every sound file loads and decodes (kits, instruments, fx, v1 chops)', lib.total === 160 && lib.decoded === lib.total, lib);
 
   current = 'Music + charts';
   const follow = await page.evaluate(async () => {
@@ -73,18 +73,35 @@ const autoPlay = page => page.evaluate(() => new Promise(res => {
   check('Rookie: every note is a drum hit the song actually plays (guide drums on)', follow.easy.notes > 5 && follow.easy.backingPlaysThem === follow.easy.notes, follow.easy);
   check('Headliner: the backing drops your notes, so only your taps fill them', follow.expert.notes > 5 && follow.expert.backingPlaysThem === 0, follow.expert);
   const styles = await page.evaluate(async () => {
+    // share of energy above 4 kHz, above 8 kHz and below 60 Hz (4096-point FFT averaged over the render)
+    const spectrum = b => {
+      const N = 4096, d = b.getChannelData(0), rate = b.sampleRate, win = new Float32Array(N), re = new Float32Array(N), im = new Float32Array(N), acc = new Float64Array(N / 2);
+      for (let i = 0; i < N; i++) win[i] = 0.5 - 0.5 * Math.cos(2 * Math.PI * i / N);
+      for (let o = 0; o + N <= d.length; o += N * 4) {
+        for (let i = 0; i < N; i++) { re[i] = d[o + i] * win[i]; im[i] = 0; }
+        for (let i = 1, j = 0; i < N; i++) { let bit = N >> 1; for (; j & bit; bit >>= 1) j ^= bit; j ^= bit; if (i < j) { const t = re[i]; re[i] = re[j]; re[j] = t; } }
+        for (let len = 2; len <= N; len <<= 1) { const ang = -2 * Math.PI / len; for (let i = 0; i < N; i += len) for (let k = 0; k < len / 2; k++) { const wr = Math.cos(ang * k), wi = Math.sin(ang * k), a = i + k, c = a + len / 2, xr = re[c] * wr - im[c] * wi, xi = re[c] * wi + im[c] * wr; re[c] = re[a] - xr; im[c] = im[a] - xi; re[a] += xr; im[a] += xi; } }
+        for (let i = 0; i < N / 2; i++) acc[i] += re[i] * re[i] + im[i] * im[i];
+      }
+      let tot = 0, a4 = 0, a8 = 0, lo = 0; for (let i = 1; i < N / 2; i++) { const f = i * rate / N; tot += acc[i]; if (f >= 4000) a4 += acc[i]; if (f >= 8000) a8 += acc[i]; if (f < 60) lo += acc[i]; }
+      return { above4k: +(100 * a4 / tot).toFixed(2), above8k: +(100 * a8 / tot).toFixed(2), below60: +(100 * lo / tot).toFixed(1) };
+    };
     const M = ORBIT.music, r = {}, st = b => { let s = 0, n = 0, pk = 0; for (let c = 0; c < b.numberOfChannels; c++) { const d = b.getChannelData(c); for (let i = 0; i < d.length; i++) { s += d[i] * d[i]; n++; pk = Math.max(pk, Math.abs(d[i])); } } return [+(10 * Math.log10(s / n)).toFixed(1), +(20 * Math.log10(pk)).toFixed(1)]; };
-    for (const [id, bpm] of [['boombap', 88], ['jazzhop', 104], ['house', 128], ['garage', 130], ['melodic', 122], ['dark', 140]]) {
+    for (const [id, bpm] of [['boombap', 88], ['soul', 96], ['trap', 140], ['house', 126], ['basshouse', 126], ['garage', 132], ['dubstep', 140]]) {
       await ORBIT.assets.ensure(M.assetsFor(id));
       const secs = 240 / bpm * 8 + 0.4;
-      const mix = st(await M.renderOffline(id, bpm, secs, { preLimiter: true })), mel = st(await M.renderOffline(id, bpm, secs, { preLimiter: true, only: 'melody' })), bass = st(await M.renderOffline(id, bpm, secs, { preLimiter: true, only: 'bass' }));
-      r[id] = { rms: mix[0], peak: mix[1], melodyVsBass: +(mel[0] - bass[0]).toFixed(1) };
+      const full = await M.renderOffline(id, bpm, secs, { preLimiter: true });
+      const mix = st(full), mel = st(await M.renderOffline(id, bpm, secs, { preLimiter: true, only: 'melody' })), bass = st(await M.renderOffline(id, bpm, secs, { preLimiter: true, only: 'bass' }));
+      const sp = spectrum(full);
+      r[id] = { rms: mix[0], peak: mix[1], melodyVsBass: +(mel[0] - bass[0]).toFixed(1), above4k: sp.above4k, above8k: sp.above8k, below60: sp.below60 };
     }
     return r;
   });
   const rmsVals = Object.values(styles).map(x => x.rms);
-  check('All 6 backing styles level-matched within 3 dB (pre-limiter RMS)', Math.max(...rmsVals) - Math.min(...rmsVals) <= 3, styles);
-  check('Backing leaves headroom (pre-limiter peaks below −6 dBFS)', Object.values(styles).every(x => x.peak < -6), Object.fromEntries(Object.entries(styles).map(([k, v]) => [k, v.peak])));
+  check('All 7 songs level-matched within 3 dB (pre-limiter RMS)', Math.max(...rmsVals) - Math.min(...rmsVals) <= 3, styles);
+  check('Songs stay under full scale before the limiter (peaks below −2 dBFS)', Object.values(styles).every(x => x.peak < -2), Object.fromEntries(Object.entries(styles).map(([k, v]) => [k, v.peak])));
+  check('Not dull: every song has at least 3% of its energy above 4 kHz and 1.5% above 8 kHz (v3.0 songs: about 2% and 0.3%)', Object.values(styles).every(x => x.above4k >= 3 && x.above8k >= 1.5), Object.fromEntries(Object.entries(styles).map(([k, v]) => [k, v.above4k + '/' + v.above8k])));
+  check('Not boomy: less than half of any song’s energy sits below 60 Hz, where phone speakers play nothing', Object.values(styles).every(x => x.below60 < 50), Object.fromEntries(Object.entries(styles).map(([k, v]) => [k, v.below60])));
   check('Melody audible: within 7 dB of the bass in every style', Object.values(styles).every(x => x.melodyVsBass > -7), Object.fromEntries(Object.entries(styles).map(([k, v]) => [k, v.melodyVsBass])));
 
   // ---------------------------------------------------------------- full set, machine-timed taps
@@ -160,11 +177,11 @@ const autoPlay = page => page.evaluate(() => new Promise(res => {
     const grid = afterResume.filter(s => s.k % 2 === 0).map(s => Math.abs(s.t - (s.origin + s.k * s.unit)) * 1000);
     const originOk = Math.abs(M.origin - (G.startAt + G.leadIn)) < 1e-9;
     const notesBefore = G.notes.length, styleBefore = M.style;
-    G.setStyle('dark'); await wait(100);
+    G.setStyle('dubstep'); await wait(100);
     const locked = M.style === styleBefore && G.notes.length === notesBefore;
     G.stop(); G.setStyle('auto');
     M.start({ style: 'boombap', bpm: 92, mode: 'jam' }); await wait(1200);
-    log.length = 0; M.restyle('dark'); await wait(60); const burst = log.slice(); await wait(800);
+    log.length = 0; M.restyle('dubstep'); await wait(60); const burst = log.slice(); await wait(800);
     const restyled = log.slice(); M.stop();
     const past = restyled.filter(s => s.t < s.now - 0.006).length;
     let minGap = Infinity; for (let i = 1; i < restyled.length; i++) minGap = Math.min(minGap, restyled[i].t - restyled[i - 1].t);

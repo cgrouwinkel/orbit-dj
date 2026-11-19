@@ -4,16 +4,17 @@
 const { chromium } = require(process.env.PW || 'playwright');
 const fs = require('fs'), path = require('path'), { execFileSync } = require('child_process');
 const BASE = (process.argv[2] || 'http://127.0.0.1:8710').replace(/\/$/, ''), ROOT = path.join(__dirname, '..');
-const TRACKS = [
-  { id: 'glass', style: 'melodic', bpm: 122, title: 'Glass Horizon', key: 'A minor', form: 'deck64' },
-  { id: 'neon', style: 'house', bpm: 124, title: 'Neon Pressure', key: 'C minor', form: 'deck64' },
-  { id: 'tonic', style: 'garage', bpm: 130, title: 'Two-Step Tonic', key: 'F minor', form: 'deck64' },
-  { id: 'final', style: 'dark', bpm: 140, title: 'Final Frequency', key: 'E minor', form: 'deck64' },
+const TRACKS = [ // keys are chosen so the gig pairs land in key once the tempos are matched (no key lock: slowing a deck lowers its pitch)
+  { id: 'neon', style: 'house', bpm: 124, title: 'Neon Pressure', key: 'F minor', form: 'deck64' },
+  { id: 'glass', style: 'basshouse', bpm: 126, title: 'Glass Horizon', key: 'F minor', form: 'deck64' },
+  { id: 'tonic', style: 'garage', bpm: 132, title: 'Two-Step Tonic', key: 'A major', form: 'deck64' },
+  { id: 'final', style: 'dubstep', bpm: 140, title: 'Final Frequency', key: 'G minor', form: 'deck64' },
+  { id: 'night', style: 'trap', bpm: 140, title: 'Night Shift', key: 'G minor', form: 'deck64' },
   { id: 'groove', style: 'boombap', bpm: 88, title: 'The First Groove', key: 'A minor', form: 'deck48' },
-  { id: 'bounce', style: 'jazzhop', bpm: 92, title: 'Basement Bounce', key: 'G minor', form: 'deck48' }
+  { id: 'bounce', style: 'soul', bpm: 94, title: 'Basement Bounce', key: 'D-flat major', form: 'deck48' }
 ];
 (async () => {
-  const tmp = fs.mkdtempSync('/tmp/orbit-tracks-'); fs.mkdirSync(path.join(ROOT, 'tracks'), { recursive: true });
+  const tmp = fs.mkdtempSync('/tmp/orbit-tracks-'); fs.rmSync(path.join(ROOT, 'tracks'), { recursive: true, force: true }); fs.mkdirSync(path.join(ROOT, 'tracks'), { recursive: true });
   const b = await chromium.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', args: ['--autoplay-policy=no-user-gesture-required'] });
   const ctx = await b.newContext({ acceptDownloads: true }); const p = await ctx.newPage();
   p.on('pageerror', e => console.log('PAGEERROR', e.message));
@@ -28,15 +29,17 @@ const TRACKS = [
       const buf = await M.renderOffline(T.style, T.bpm, secs + 1.2, { guide: 1, form: T.form, preLimiter: true, musicLevel: 0.78, tail: 1.2 });
       let s = 0, n = 0, pk = 0;
       for (let c = 0; c < 2; c++) { const d = buf.getChannelData(c); for (let i = 0; i < d.length; i++) { s += d[i] * d[i]; n++; const a = Math.abs(d[i]); if (a > pk) pk = a; } }
-      const rms = Math.sqrt(s / n); let g = Math.pow(10, -16 / 20) / rms; if (pk * g > 0.94) g = 0.94 / pk;
-      for (let c = 0; c < 2; c++) { const d = buf.getChannelData(c); for (let i = 0; i < d.length; i++) d[i] *= g; }
+      // Master to about -13 dBFS RMS: gain, then a soft clipper that only rounds off the loudest drum peaks.
+      const rms = Math.sqrt(s / n), g = Math.pow(10, -13 / 20) / rms, knee = 0.72, top = 0.25; let clipped = 0; s = 0; pk = 0;
+      for (let c = 0; c < 2; c++) { const d = buf.getChannelData(c); for (let i = 0; i < d.length; i++) { let x = d[i] * g; const a = Math.abs(x); if (a > knee) { x = Math.sign(x) * (knee + top * Math.tanh((a - knee) / top)); clipped++; } d[i] = x; s += x * x; if (Math.abs(x) > pk) pk = Math.abs(x); } }
+      const outRms = Math.sqrt(s / n);
       const a = document.createElement('a'); a.href = URL.createObjectURL(ORBIT.beatpad.encodeWav(buf)); a.download = T.id + '.wav'; document.body.appendChild(a); a.click();
-      return { bars, duration: +(secs + 1.2).toFixed(3), swing: M.STYLES[T.style].swing, sections: M.sections(T.form), rmsDb: +(20 * Math.log10(rms * g)).toFixed(1), peakDb: +(20 * Math.log10(pk * g)).toFixed(1) };
+      return { bars, duration: +(secs + 1.2).toFixed(3), swing: M.STYLES[T.style].swing, sections: M.sections(T.form), rmsDb: +(20 * Math.log10(outRms)).toFixed(1), peakDb: +(20 * Math.log10(pk)).toFixed(1), shapedPct: +(100 * clipped / n).toFixed(2) };
     }, T)]);
     const wav = path.join(tmp, T.id + '.wav'); await dl.saveAs(wav);
-    execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', wav, '-codec:a', 'libmp3lame', '-b:a', '128k', '-ar', '44100', path.join(ROOT, 'tracks', T.id + '.mp3')]);
+    execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', wav, '-codec:a', 'libmp3lame', '-b:a', '160k', '-ar', '44100', path.join(ROOT, 'tracks', T.id + '.mp3')]);
     manifest.push(Object.assign({ id: T.id, title: T.title, style: T.style, bpm: T.bpm, key: T.key, file: 'tracks/' + T.id + '.mp3', first: 0.05 }, meta));
-    console.log(T.id, JSON.stringify(meta).slice(0, 200), Math.round(fs.statSync(path.join(ROOT, 'tracks', T.id + '.mp3')).size / 1024) + ' KB');
+    console.log(T.id, meta.bars + ' bars', meta.duration + ' s', 'rms ' + meta.rmsDb, 'peak ' + meta.peakDb, 'shaped ' + meta.shapedPct + '%', Math.round(fs.statSync(path.join(ROOT, 'tracks', T.id + '.mp3')).size / 1024) + ' KB');
   }
   fs.writeFileSync(path.join(ROOT, 'js', 'tracks-manifest.js'), '/* Generated by tools/render_tracks.js. first = seconds of silence before beat 1 in the render (the app re-detects it after decoding). */\nwindow.ORBIT_TRACKS = ' + JSON.stringify(manifest) + ';\n');
   await b.close();

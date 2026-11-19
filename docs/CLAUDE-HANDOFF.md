@@ -1,4 +1,4 @@
-# ORBIT DJ — Claude handoff (after v3.0.0, 2026-11-18)
+# ORBIT DJ — Claude handoff (after v3.1.0, 2026-11-19)
 
 ## Source of truth
 - This source bundle (`ORBIT-DJ-v2.1.0-source.zip`) replaces earlier bundles and `ORBIT-Arcade-Final-Prototype.zip`.
@@ -26,8 +26,14 @@ Storage keys: v1 keys kept (`orbitArcadeProgress`, `orbitArcadeTheme` (raw strin
 
 Sounds: `python3 tools/make_sounds.py` regenerates `sounds/` and `js/sounds-manifest.js` (deterministic). Build and test: `python3 tools/build.py`, serve `dist/site`, then `node tests/qa.js <url>` (set `PW` to the Playwright module path if needed): 103 checks. `tools/render_previews.js` renders listening previews with the app's own engine.
 
+## v3.1 changes (sound library and songs)
+- `tools/make_sounds.py` regenerates the whole library at 44.1 kHz (it deletes `sounds/kits` and `sounds/inst` first). New building blocks: `svf` (state-variable filter), `saw_ph`, `room`, `sp` (early-sampler grit), `ott` (multiband upward compression), `sing` (formant voice with formant tuning and `balance()`), `growl(kind)`. Instruments are listed in `INSTRUMENTS` (builder, MIDI roots, output rate).
+- Styles in music.js: `house`, `basshouse`, `garage`, `dubstep`, `trap`, `boombap`, `soul` (`ALIASES` maps old ids: hiphop, jazzhop, melodic, dark). Each `play(...)` uses helpers `H.n` (note: attack, release, pan, send, echo, detune, glide), `H.c` (chord, `wide` doubles and pans), `H.d` (off-grid drum hit), `H.pump`, `H.fx`. Per-style `duckBass` sets the sidechain depth on the bass separately from the melody.
+- Engine: `Synth.inst` accepts `detune`, `glide` and a second send (`send2`, used for the session echo bus `L.echo`). The reverb return is high-passed at 320 Hz. `SCALE.music` is 0.75.
+- `tools/analyze_audio.py` prints band energies, energy above 4 and 8 kHz and the centroid for any audio file; use it after changing sounds. Re-run `tools/render_tracks.js` after changing any song.
+
 ## v3.0 additions (two decks, school, arranged songs)
-- **Songs:** `buildForm(name)` in music.js maps every bar of a set or track to `{ sec, pos, dk (drum groove), hb (which of the 8 written bars), bass, mel, lead, full }`. Forms: `24`, `32` (rhythm sets), `deck48`, `deck64` (deck tracks with `mixin` / `mixout`). Each style's `play(c, L, bar, step, t, beat, H, X)` reads `X` to decide which parts play. Extra grooves `I`, `K`, `R1`, `R2` are derived per style. `M.start({ form })`, `M.renderOffline(..., { form, tail, noBed })`, `M.sections(form)`.
+- **Songs:** `buildForm(name)` in music.js maps every bar of a set or track to `{ sec, pos, dk (drum groove), hb (which of the 8 written bars), bass, mel, lead, full }`. Forms: `24`, `32` (rhythm sets), `deck48`, `deck64` (deck tracks with `mixin` / `mixout`). Seven deck tracks as of v3.1. Each style's `play(c, L, bar, step, t, beat, H, X)` reads `X` to decide which parts play. Extra grooves `I`, `K`, `R1`, `R2` are derived per style. `M.start({ form })`, `M.renderOffline(..., { form, tail, noBed })`, `M.sections(form)`.
 - **Deck tracks:** `tools/render_tracks.js` renders six tracks through `M.renderOffline` (pre-limiter, normalized to −16 dBFS RMS), encodes MP3 with ffmpeg and writes `js/tracks-manifest.js` (`window.ORBIT_TRACKS`: id, title, style, bpm, key, bars, sections). Re-run it after changing any song. MP3 decoders add padding, so `decks.js` re-detects beat 1 after decoding (`analyse()`).
 - **`js/decks.js` (`O.decks`):** deck state, `D.load/play/pause/toggle/seek`, `D.posOf` (audio-clock position incl. loop wrap), `D.cueDown/cueUp`, `D.setTempo`, `D.toggleSync` (+ quantized start in `D.play`), `D.nudge/bendTo/jog*`, `D.loopOn/Off/Scale`, `D.rollStart/End` (slip), `D.jump`, `D.hot`, pad modes (`D.padDown/padUp/setPadMode`), mixer (`D.set(i, name, v)`, `D.setXf`, `D.setFx`, `D.setSplit`, `D.level`), `D.phaseMs()`, `D.where(d)`. Sources are restarted for every seek / loop change; `startSrc(d, delay, keep)` with `keep` skips the 6 ms scheduling delay so phase-preserving operations do not drift. Graph is rebuilt on `audio-reset`.
 - **`js/school.js` (`O.school`):** `LESSONS` (steps `{ t, ok(A, B, mem), hold }`), `GIGS`, `startLesson/startGig/finishGig/stop`, `phraseDist`, `BEAT_LESSONS` (steps `{ t, ok(mem, keep), enter, count }`), `startBeat/stopBeat`, `tick()` (called every frame from ui.js). Progress key `orbitV3School`.

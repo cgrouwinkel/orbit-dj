@@ -26,8 +26,8 @@
     "file": "06-rim.wav"
    },
    {
-    "name": "SNAP",
-    "file": "07-snap.wav"
+    "name": "CLAP",
+    "file": "07-clap.wav"
    },
    {
     "name": "SHAKER",
@@ -42,8 +42,8 @@
     "file": "10-high-tom.wav"
    },
    {
-    "name": "CONGA",
-    "file": "11-conga.wav"
+    "name": "TAMB",
+    "file": "11-tamb.wav"
    },
    {
     "name": "RIDE",
@@ -58,8 +58,8 @@
     "file": "14-keys.wav"
    },
    {
-    "name": "VOX AH",
-    "file": "15-vox-ah.wav"
+    "name": "VOX",
+    "file": "15-vox.wav"
    },
    {
     "name": "SCRATCH",
@@ -120,16 +120,16 @@
     "file": "13-bass.wav"
    },
    {
-    "name": "ORGAN",
-    "file": "14-organ.wav"
+    "name": "STAB",
+    "file": "14-stab.wav"
    },
    {
-    "name": "VOX OH",
-    "file": "15-vox-oh.wav"
+    "name": "VOX",
+    "file": "15-vox.wav"
    },
    {
-    "name": "RISER",
-    "file": "16-riser.wav"
+    "name": "CRASH",
+    "file": "16-crash.wav"
    }
   ],
   "midnight": [
@@ -166,12 +166,12 @@
     "file": "08-perc.wav"
    },
    {
-    "name": "808 TOM",
-    "file": "09-808-tom.wav"
+    "name": "BIG SNARE",
+    "file": "09-big-snare.wav"
    },
    {
-    "name": "808 TOM HI",
-    "file": "10-808-tom-hi.wav"
+    "name": "808 TOM",
+    "file": "10-808-tom.wav"
    },
    {
     "name": "IMPACT",
@@ -190,21 +190,16 @@
     "file": "14-dark-stab.wav"
    },
    {
-    "name": "VOX OO",
-    "file": "15-vox-oo.wav"
+    "name": "VOX",
+    "file": "15-vox.wav"
    },
    {
-    "name": "ZAP",
-    "file": "16-zap.wav"
+    "name": "GROWL",
+    "file": "16-growl.wav"
    }
   ]
  },
  "inst": {
-  "ep": [
-   45,
-   57,
-   69
-  ],
   "sub": [
    33,
    45
@@ -217,18 +212,53 @@
    33,
    45
   ],
-  "sawbass": [
+  "techbass": [
+   29,
+   41
+  ],
+  "donk": [
+   41,
+   53
+  ],
+  "reese": [
    33,
    45
+  ],
+  "gr1": [
+   31
+  ],
+  "gr2": [
+   31
+  ],
+  "gr3": [
+   31
+  ],
+  "gr4": [
+   31
+  ],
+  "piano": [
+   48,
+   60,
+   72
+  ],
+  "ep": [
+   45,
+   57,
+   69
+  ],
+  "vibes": [
+   69,
+   81
+  ],
+  "supersaw": [
+   57,
+   69,
+   81
   ],
   "pluck": [
    57,
    69,
    81
-  ],
-  "organ": [
-   57,
-   69
   ],
   "pad": [
    45,
@@ -243,27 +273,46 @@
    69,
    81
   ],
-  "vox": [
+  "strings": [
+   57,
+   69,
+   81
+  ],
+  "brass": [
    57,
    69
   ],
-  "piano": [
-   48,
-   60,
-   72
+  "choir": [
+   57,
+   69
   ],
-  "guitar": [
-   52,
-   64
+  "vah": [
+   62,
+   74
   ],
-  "strings": [
-   69,
-   76,
-   83
+  "voh": [
+   62,
+   74
   ],
-  "lead": [
-   69,
-   81
+  "vee": [
+   62,
+   74
+  ],
+  "vyeah": [
+   62,
+   74
+  ],
+  "vhey": [
+   62,
+   74
+  ],
+  "chipoo": [
+   70,
+   78
+  ],
+  "chipah": [
+   70,
+   78
   ]
  },
  "fx": [

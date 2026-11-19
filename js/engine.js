@@ -13,7 +13,7 @@
   const S = O.store;
 
   // Level scaling chosen from offline loudness measurements (see QA report).
-  const SCALE = { music: 0.55, pads: 1.0, sampler: 1.0 };
+  const SCALE = { music: 0.75, pads: 1.0, sampler: 1.0 };
   const DEFAULT_LEVELS = { music: 0.78, pads: 0.6, sampler: 0.6 };
 
   const E = (O.engine = {
@@ -112,7 +112,10 @@
     // Shared room reverb for the backing track (returns before the DJ EQ/filter, so sweeps affect it).
     const revIn = c.createGain(), revOut = c.createGain();
     revOut.gain.value = 0.85;
-    try { const conv = c.createConvolver(); conv.buffer = makeImpulse(c, 1.9); revIn.connect(conv); conv.connect(revOut); revOut.connect(lowShelf); } catch (e) {}
+    try { // the return is high-passed so the reverb adds space without clouding the low end
+      const conv = c.createConvolver(), revHp = c.createBiquadFilter(); revHp.type = 'highpass'; revHp.frequency.value = 320;
+      conv.buffer = makeImpulse(c, 1.6); revIn.connect(conv); conv.connect(revHp); revHp.connect(revOut); revOut.connect(lowShelf);
+    } catch (e) {}
     const analyser = c.createAnalyser(); analyser.fftSize = 1024; analyser.smoothingTimeConstant = 0.78;
     music.connect(analyser);
 
@@ -130,7 +133,7 @@
       for (let i = pre; i < len; i++) {
         seed = (seed * 1103515245 + 12345) & 0x7fffffff;
         const n = seed / 0x3fffffff - 1, t = (i - pre) / rate;
-        const k = 0.35 + 0.6 * Math.min(1, t / seconds); // more smoothing (darker) as the tail goes on
+        const k = 0.15 + 0.6 * Math.min(1, t / seconds); // more smoothing (darker) as the tail goes on
         lp += (n - lp) * (1 - k);
         d[i] = lp * Math.exp(-t / (seconds * 0.28)) * 0.55;
       }
@@ -363,11 +366,13 @@
   };
 
   // ---------- sampled instruments and drum kits (fall back to oscillators if a file is missing) ----------
-  const FALLBACK = { ep: ['sine', 2400], sub: ['sine', 300], b808: ['sine', 300], upright: ['triangle', 900], sawbass: ['sawtooth', 600],
-    pluck: ['sawtooth', 2600], organ: ['square', 2200], pad: ['sawtooth', 1400], bell: ['sine', 6000], flute: ['triangle', 3000], vox: ['sawtooth', 1200],
-    piano: ['triangle', 3000], guitar: ['triangle', 2400], strings: ['sawtooth', 2200], lead: ['sawtooth', 3200] };
+  const FALLBACK = { sub: ['sine', 300], b808: ['sine', 300], upright: ['triangle', 900], techbass: ['sawtooth', 500], donk: ['square', 700], reese: ['sawtooth', 600],
+    gr1: ['sawtooth', 1500], gr2: ['sawtooth', 900], gr3: ['square', 3000], gr4: ['sawtooth', 1800], piano: ['triangle', 4000], ep: ['sine', 2400], vibes: ['sine', 3000],
+    supersaw: ['sawtooth', 6000], pluck: ['sawtooth', 3500], pad: ['sawtooth', 2200], bell: ['sine', 6000], flute: ['triangle', 3000], strings: ['sawtooth', 3000], brass: ['sawtooth', 2600],
+    choir: ['sawtooth', 1400], vah: ['sawtooth', 1600], voh: ['sawtooth', 1200], vee: ['sawtooth', 2200], vyeah: ['sawtooth', 1800], vhey: ['sawtooth', 2200], chipoo: ['triangle', 2400], chipah: ['sawtooth', 2400] };
   let panOK = null;
-  // Play instrument `name` at MIDI note `midi`. o: { dur (s), vel, attack, release, pan, send (reverb 0-1) }
+  // Play instrument `name` at MIDI note `midi`.
+  // o: { dur (s), vel, attack, release, pan, send + sendDest, send2 + send2Dest, detune (cents), glide: { to (semitones), at, time } }
   Synth.inst = function (c, dest, name, midi, t, o) {
     o = o || {};
     t = Math.max(t, c.currentTime + 0.002);
@@ -381,7 +386,8 @@
     }
     const buf = O.assets.get('sounds/inst/' + name + '-' + best + '.wav');
     const s = c.createBufferSource(), g = c.createGain();
-    s.buffer = buf; s.playbackRate.value = Math.pow(2, (midi - best) / 12);
+    s.buffer = buf; s.playbackRate.value = Math.pow(2, (midi - best + (o.detune || 0) / 100) / 12);
+    if (o.glide) { const r0 = s.playbackRate.value, at = t + (o.glide.at || 0); s.playbackRate.setValueAtTime(r0, at); s.playbackRate.exponentialRampToValueAtTime(r0 * Math.pow(2, o.glide.to / 12), at + (o.glide.time || 0.1)); }
     const peak = vel * vel, atk = o.attack || 0.003, end = t + dur;
     g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(peak, t + atk);
     g.gain.setValueAtTime(peak, Math.max(t + atk, end)); g.gain.setTargetAtTime(0, end, rel / 3);
@@ -393,6 +399,7 @@
     }
     out.connect(dest);
     if (o.send && o.sendDest) { const sg = c.createGain(); sg.gain.value = o.send; out.connect(sg); sg.connect(o.sendDest); }
+    if (o.send2 && o.send2Dest) { const sg = c.createGain(); sg.gain.value = o.send2; out.connect(sg); sg.connect(o.send2Dest); }
     s.start(t); s.stop(Math.min(t + buf.duration / s.playbackRate.value, end + rel * 2.5) + 0.02);
     s.onended = () => { try { s.disconnect(); g.disconnect(); out.disconnect(); } catch (e) {} };
     return s;

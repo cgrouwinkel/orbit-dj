@@ -27,7 +27,7 @@ const BASE = (process.argv[2] || 'http://127.0.0.1:8710').replace(/\/$/, ''), OU
   });
   await grab('music.wav', async () => {
     const M = ORBIT.music, bufs = [];
-    for (const [id, bpm] of [['boombap', 88], ['jazzhop', 104], ['house', 128], ['garage', 130], ['melodic', 122], ['dark', 140]]) {
+    for (const [id, bpm] of [['boombap', 88], ['soul', 96], ['trap', 140], ['house', 126], ['basshouse', 126], ['garage', 132], ['dubstep', 140]]) {
       await ORBIT.assets.ensure(M.assetsFor(id));
       bufs.push(await M.renderOffline(id, bpm, 240 / bpm * 8 + 1.2, { guide: 1 }));
     }
@@ -38,7 +38,7 @@ const BASE = (process.argv[2] || 'http://127.0.0.1:8710').replace(/\/$/, ''), OU
     const beats = [
       { kit: 'dusty', bpm: 90, swing: 58, style: 'boombap', events: [].concat(ev(0, [0, 8, 10], 1), ev(1, [4, 12], 1), ev(2, [0, 2, 4, 6, 8, 10, 12, 14], 0.7), ev(3, [14], 0.5), ev(5, [7], 0.5), ev(13, [0], 0.6), ev(15, [12], 0.7)) },
       { kit: 'club', bpm: 124, swing: 52, style: 'house', events: [].concat(ev(0, [0, 4, 8, 12], 1), ev(1, [4, 12], 0.9), ev(2, [1, 3, 5, 7, 9, 11, 13, 15], 0.45), ev(3, [2, 6, 10, 14], 0.7), ev(8, [3, 11], 0.6), ev(9, [6, 14], 0.55), ev(13, [0], 0.6)) },
-      { kit: 'midnight', bpm: 140, swing: 50, style: 'dark', events: [].concat(ev(0, [0, 10], 1), ev(1, [8], 1), ev(5, [8], 0.6), ev(2, [0, 2, 4, 6, 8, 10, 12, 13, 14, 15], 0.6), ev(12, [0], 0.9, 0), ev(12, [10], 0.8, -2), ev(15, [14], 0.6)) }
+      { kit: 'midnight', bpm: 140, swing: 50, style: 'dubstep', events: [].concat(ev(0, [0, 10], 1), ev(1, [8], 1), ev(5, [8], 0.6), ev(2, [0, 2, 4, 6, 8, 10, 12, 13, 14, 15], 0.6), ev(12, [0], 0.9, 0), ev(12, [10], 0.8, -2), ev(15, [14], 0.6)) }
     ];
     for (const x of beats) {
       BP.setKit(x.kit); await BP.loadKit(); BP.bpm = x.bpm; BP.swing = x.swing; BP.backingStyle = x.style;

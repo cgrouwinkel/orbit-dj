@@ -164,7 +164,8 @@
     } catch (e) { O.toast('Could not load the track. Check your connection and try again.'); return false; }
     finally { d.loading = false; O.emit('deck', { deck: i, type: 'loaded' }); }
   };
-  D.preload = () => { TRACKS.forEach(t => D.fetchTrack(t.id).catch(() => {})); O.assets.prefetch(SAMPLER.map(s => s.path).filter(Boolean)); };
+  // Fetch only the two lesson tracks ahead of time; the rest load when picked (each is about 2.5 MB).
+  D.preload = () => { ['neon', 'glass'].forEach(id => { if (D.track(id)) D.fetchTrack(id).catch(() => {}); }); O.assets.prefetch(SAMPLER.map(s => s.path).filter(Boolean)); };
 
   // ---------- time ----------
   D.posOf = function (d, t) {
@@ -377,7 +378,7 @@
   const fx = n => O.assets.fxPath(n), kit = (k, i) => (O.assets.kitPaths(k) || [])[i];
   const SAMPLER = [
     { name: 'IMPACT', path: fx('impact'), vel: 0.8 }, { name: 'CROWD', path: fx('crowd'), vel: 0.7 }, { name: 'RISER', path: fx('riser'), vel: 0.6 }, { name: 'SCRATCH', path: fx('scratch'), vel: 0.9 },
-    { name: 'CLAP', path: kit('club', 1), vel: 0.9 }, { name: 'ZAP', path: kit('midnight', 15), vel: 0.8 }, { name: 'VOX', path: kit('club', 14), vel: 0.8 }, { name: 'CRASH', path: kit('midnight', 11), vel: 0.7 }
+    { name: 'CLAP', path: kit('club', 1), vel: 0.9 }, { name: 'GROWL', path: kit('midnight', 15), vel: 0.8 }, { name: 'VOX', path: kit('club', 14), vel: 0.8 }, { name: 'CRASH', path: kit('midnight', 11), vel: 0.7 }
   ];
   D.SAMPLER = SAMPLER;
   D.sample = function (d, n) {

@@ -102,7 +102,7 @@ if __name__ == '__main__':
         names = z.namelist()
     assert 'index.html' in names, 'index.html must be at the ZIP root'
     assert sum(n.startswith('samples/') for n in names) == 48, 'expected 48 v1 chop samples'
-    assert sum(n.startswith('sounds/') and n.endswith('.wav') for n in names) == 89, 'expected 89 sounds'
-    assert sum(n.startswith('tracks/') and n.endswith('.mp3') for n in names) == 6, 'expected 6 deck tracks'
+    assert sum(n.startswith('sounds/') and n.endswith('.wav') for n in names) == 112, 'expected 112 sounds'
+    assert sum(n.startswith('tracks/') and n.endswith('.mp3') for n in names) == 7, 'expected 7 deck tracks'
     for p in (netlify_zip, standalone, source):
         print(f'{os.path.relpath(p, ROOT)}  {os.path.getsize(p) / 1024:.0f} KB')
