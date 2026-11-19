@@ -1,5 +1,36 @@
 # ORBIT DJ — Changelog
 
+## v3.0.0 — 2026-11-18 (two-deck controller, DJ school, beat trainer, rearranged songs)
+
+### New: Mix tab — a full two-deck DJ controller
+- **Two decks** playing six original tracks (about two minutes each), with scrolling waveforms, beat / bar / 8-bar phrase marks and a live "beats in time / B is 40 ms late" readout.
+- **Per deck:** PLAY, CUE (CDJ behaviour: set, return, hold to preview), jog wheel (nudge while playing, scrub when stopped), nudge + / − buttons, tempo fader (±10%, no key lock, so pitch follows tempo like vinyl), SYNC (tempo and beat lock, quantized start), LOOP with ½ and ×2, BPM and bar-of-phrase readouts, time remaining.
+- **Performance pads** (8 per deck, 5 modes): HOT CUE (set, jump, delete), LOOP (¼ to 32 beats), ROLL (loop roll with slip), JUMP (beat jump ±1 to ±16), SAMPLER (8 one-shots).
+- **Mixer:** GAIN, 3-band EQ with full kills, bipolar FILTER (low-pass left, high-pass right), channel faders with meters, crossfader, master, FX unit (echo at ½ / 1 / 2 beats, reverb, flanger) with a send per deck, headphone cue buttons and **SPLIT** cue (cued deck in the left ear, mix in the right; needs headphones).
+- Knobs and faders are custom touch controls: drag from anywhere on the control, double-tap to reset.
+
+### New: DJ school (Mix tab → LESSONS + GIGS)
+- **14 controller lessons**, one per control: play + cue, gain + channel fader, crossfader, tempo fader, jog + nudge, SYNC, EQ + bass swap, filter, loops, hot cues, roll / jump / sampler, FX echo out, headphone cue, and a guided first transition. Every step checks the real deck and mixer state, so it only passes when you make the move.
+- **4 gigs** (scored transitions out of 100): beatmatch 35%, phrasing 20%, bass swap 20%, levels 10%, finish 15%. Two allow SYNC; two are tempo-fader-and-jog only. Results list what to fix.
+
+### New: beat trainer (Beats tab → TRAIN)
+- **7 beat-making lessons:** four on the floor, backbeat + hats, finger drumming (hits judged against the beat), recording a take, note repeat + swing, a 16 Levels bassline, and arranging with patterns A–D.
+
+### Songs
+- Every song now has an arrangement instead of an 8-bar loop: intro, verse, build with a snare roll and riser, drop, breakdown and a second drop with an extra lead.
+- Four new sampled instruments (piano, nylon guitar, strings, synth lead) and new parts: guitar and piano intros, breakdown riffs, string lines, lead hooks on the last drop.
+- Deck tracks add a drums-only mix-in and mix-out so two tracks can be blended, and keep 8-bar phrasing throughout.
+- Rhythm sets follow the arrangement: hold notes sit in builds and breakdowns, the snare roll is charted.
+
+### Other
+- Career page links to the DJ school and beat trainer and shows progress. "Reset career" also clears lesson ticks and gig scores.
+- Site size is now about 17 MB (11.6 MB of that is the six deck tracks, loaded only when you open the Mix tab).
+
+### Not yet verified
+- **No iPhone or Safari testing.** Things most likely to need work on a real phone: memory with two two-minute tracks decoded (roughly 50 MB each), jog-wheel feel, knob size on small screens, and split cue routing.
+- The songs have been measured (levels, structure) but not listened to by a person. Whether they now sound good enough is the owner's call.
+- Portrait works but scrolls; the Mix tab is designed for landscape.
+
 ## v2.2.0 — 2026-11-18 (first-run tutorial + band-game gameplay)
 
 ### New: hands-on tutorial on first open

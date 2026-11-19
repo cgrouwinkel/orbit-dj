@@ -364,7 +364,8 @@
 
   // ---------- sampled instruments and drum kits (fall back to oscillators if a file is missing) ----------
   const FALLBACK = { ep: ['sine', 2400], sub: ['sine', 300], b808: ['sine', 300], upright: ['triangle', 900], sawbass: ['sawtooth', 600],
-    pluck: ['sawtooth', 2600], organ: ['square', 2200], pad: ['sawtooth', 1400], bell: ['sine', 6000], flute: ['triangle', 3000], vox: ['sawtooth', 1200] };
+    pluck: ['sawtooth', 2600], organ: ['square', 2200], pad: ['sawtooth', 1400], bell: ['sine', 6000], flute: ['triangle', 3000], vox: ['sawtooth', 1200],
+    piano: ['triangle', 3000], guitar: ['triangle', 2400], strings: ['sawtooth', 2200], lead: ['sawtooth', 3200] };
   let panOK = null;
   // Play instrument `name` at MIDI note `midi`. o: { dur (s), vel, attack, release, pan, send (reverb 0-1) }
   Synth.inst = function (c, dest, name, midi, t, o) {

@@ -33,6 +33,7 @@
   <symbol id="i-loop" viewBox="0 0 24 24"><path d="M7 7h9.2L14 4.8 15.4 3.4 20 8l-4.6 4.6L14 11.2 16.2 9H7a3 3 0 0 0-3 3H2a5 5 0 0 1 5-5zm10 10H7.8l2.2 2.2-1.4 1.4L4 16l4.6-4.6 1.4 1.4L7.8 15H17a3 3 0 0 0 3-3h2a5 5 0 0 1-5 5z"/></symbol>
   <symbol id="i-trash" viewBox="0 0 24 24"><path d="M9 3h6l1 2h4v2H4V5h4zM6 9h12l-1 12H7z"/></symbol>
   <symbol id="i-share" viewBox="0 0 24 24"><path d="M12 2l4.5 4.5-1.4 1.4L13 5.8V15h-2V5.8L8.9 7.9 7.5 6.5zM5 11h3v2H6v7h12v-7h-2v-2h3v11H5z"/></symbol>
+  <symbol id="i-decks" viewBox="0 0 24 24"><path d="M7 5a6 6 0 1 1 0 12A6 6 0 0 1 7 5zm0 4.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zM17 9a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 3.8a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4z"/></symbol>
   <symbol id="i-import" viewBox="0 0 24 24"><path d="M11 3h2v9.2l2.1-2.1 1.4 1.4L12 16l-4.5-4.5 1.4-1.4 2.1 2.1zM5 14h2v5h10v-5h2v7H5z"/></symbol>
   <symbol id="i-x" viewBox="0 0 24 24"><path d="M5.6 4.2L12 10.6l6.4-6.4 1.4 1.4-6.4 6.4 6.4 6.4-1.4 1.4-6.4-6.4-6.4 6.4-1.4-1.4 6.4-6.4-6.4-6.4z"/></symbol>
   <symbol id="i-speaker" viewBox="0 0 24 24"><path d="M3 9h4l5-4v14l-5-4H3zM15 8.5a5 5 0 0 1 0 7l-1.4-1.4a3 3 0 0 0 0-4.2zm2.8-2.8a9 9 0 0 1 0 12.6l-1.4-1.4a7 7 0 0 0 0-9.8z"/></symbol>
@@ -51,6 +52,7 @@
     </div>
     <nav class="tabs" role="tablist" aria-label="Sections">
       <button class="tab is-active" role="tab" aria-selected="true" data-view="play"><svg><use href="#i-play"/></svg><span>Play</span></button>
+      <button class="tab" role="tab" aria-selected="false" data-view="mix"><svg><use href="#i-decks"/></svg><span>Mix</span></button>
       <button class="tab" role="tab" aria-selected="false" data-view="pads"><svg><use href="#i-pads"/></svg><span>Beats</span></button>
       <button class="tab" role="tab" aria-selected="false" data-view="career"><svg><use href="#i-star"/></svg><span>Career</span></button>
       <button class="tab" role="tab" aria-selected="false" data-view="settings"><svg><use href="#i-sliders"/></svg><span>Setup</span></button>
@@ -58,6 +60,35 @@
   </header>
 
   <main>
+    <!-- MIX: two decks and a mixer -->
+    <section class="view view-mix" id="view-mix" aria-label="Mix: two decks and a mixer">
+      <canvas class="mix-wave" id="mix-wave" aria-label="Scrolling waveforms of both decks with beat marks. Deck A on top, Deck B below."></canvas>
+      <div class="mix-coach" id="mix-coach" role="status" aria-live="polite">
+        <b id="mc-step">FREE MIX</b><span id="mc-text"></span>
+        <div class="mc-btns"><button class="btn btn-small" id="mc-quit" hidden>QUIT</button><button class="btn btn-small is-on" id="mc-next" hidden>NEXT</button><button class="btn btn-small" id="mc-school">LESSONS + GIGS</button></div>
+      </div>
+      <div class="mix-body">
+        <div class="deck dk" id="dk-0" data-deck="0" aria-label="Deck A"></div>
+        <div class="deck mx" id="mx" aria-label="Mixer">
+          <div class="mx-col" data-ch="0"></div>
+          <div class="mx-fader" data-ch="0"></div>
+          <div class="mx-mid">
+            <div class="mx-meter" id="mx-master" aria-label="Master level"><i></i><i></i></div>
+            <button class="btn mx-b" id="fx-type" aria-label="FX type. Tap to change.">ECHO 1</button>
+            <div class="kn" id="fx-amt" data-label="FX"></div>
+            <div class="mx-pair"><button class="btn mx-b" id="fx-0" aria-pressed="false">FX A</button><button class="btn mx-b" id="fx-1" aria-pressed="false">FX B</button></div>
+            <div class="mx-pair"><button class="btn mx-b" id="hp-0" aria-pressed="false" aria-label="Headphone cue deck A"><svg><use href="#i-headphones"/></svg>A</button><button class="btn mx-b" id="hp-1" aria-pressed="false" aria-label="Headphone cue deck B"><svg><use href="#i-headphones"/></svg>B</button></div>
+            <button class="btn mx-b" id="hp-split" aria-pressed="false">SPLIT</button>
+            <div class="kn" id="mx-vol" data-label="MASTER"></div>
+          </div>
+          <div class="mx-fader" data-ch="1"></div>
+          <div class="mx-col" data-ch="1"></div>
+          <div class="mx-xf"><span>A</span><div class="hs" id="mx-xfader" aria-label="Crossfader"></div><span>B</span></div>
+        </div>
+        <div class="deck dk" id="dk-1" data-deck="1" aria-label="Deck B"></div>
+      </div>
+    </section>
+
     <!-- PLAY -->
     <section class="view view-play is-active" id="view-play" aria-label="Play">
       <aside class="deck deck-left" aria-label="Transport">
@@ -150,6 +181,7 @@
           </div>
           <canvas class="lcd-grid" id="lcd-grid" aria-label="Pattern overview: 16 pads by 16 steps"></canvas>
           <div class="lcd-status" id="bp-status" aria-live="polite"></div>
+          <div class="lcd-coach" id="bp-coach" role="status" aria-live="polite" hidden><b id="bpc-step"></b><span id="bpc-text"></span><em id="bpc-count"></em></div>
         </div>
         <div class="mpc-transport">
           <button class="btn mpc-play" id="bp-play"><svg><use href="#i-play"/></svg><span>PLAY</span></button>
@@ -167,6 +199,12 @@
           <button role="tab" data-bptab="pad" aria-selected="false">PAD</button>
           <button role="tab" data-bptab="modes" aria-selected="false">MODES</button>
           <button role="tab" data-bptab="file" aria-selected="false">FILE</button>
+          <button role="tab" data-bptab="train" aria-selected="false">TRAIN</button>
+        </div>
+        <div class="mpc-panel" data-bppanel="train" hidden>
+          <p class="note">Short lessons that check what you actually do on the pads.</p>
+          <div class="lesson-list" id="beat-lessons"></div>
+          <button class="btn btn-small" id="beat-quit" hidden>QUIT LESSON</button>
         </div>
         <div class="mpc-panel" data-bppanel="steps">
           <div class="panel-row">
@@ -227,10 +265,14 @@
         </div>
       </div>
       <div class="venue-grid" id="venue-grid"></div>
+      <div class="school-strip">
+        <div class="school-card"><div class="eyebrow">MIX TAB</div><h3>DJ SCHOOL</h3><p>Two decks and a mixer. A lesson for every control, then scored transitions.</p><div class="school-stat" id="car-mix"></div><button class="btn" id="car-mix-go">OPEN LESSONS + GIGS</button></div>
+        <div class="school-card"><div class="eyebrow">BEATS TAB</div><h3>BEAT TRAINER</h3><p>Program a beat, drum it by hand, record, roll and arrange.</p><div class="school-stat" id="car-beat"></div><button class="btn" id="car-beat-go">OPEN TRAINER</button></div>
+      </div>
       <div class="career-foot">
         <div class="tip"><b>HOW TO PLAY</b>Notes fall down four lanes. They are the song’s real kick, snare, hat and FX hits, so tap the lane or its pad as each note crosses the line. Keys: F J K L, Space to start/pause, 1–8 for beat pads.</div>
         <div class="tip"><b>HOW YOU’RE GRADED</b>Rhythm accuracy gives up to 700 points and equipment tasks up to 300. Grades: S 900+, A 750+, B 550+, C 350+.</div>
-        <div class="tip"><b>WHAT’S REAL</b>Timing is judged on the Web Audio clock. The backing tracks are original synthesized layers. The crossfader blends layers of one track; true two-deck mixing is on the roadmap.</div>
+        <div class="tip"><b>WHAT’S REAL</b>Timing is judged on the Web Audio clock. All music is original and synthesized. The Mix tab is a real two-deck setup with its own tracks; the Play tab’s crossfader blends layers of one song.</div>
       </div>
     </section>
 
@@ -330,6 +372,7 @@
         <li><b>Crowd meter</b> (left of the lanes): hits fill it, misses drain it. On Club and Headliner an empty meter ends the set. Rookie never fails.</li>
         <li><b>Multiplier</b>: every 8 hits in a row adds ×1, up to ×4. A miss resets it.</li>
         <li><b>HYPE</b>: charge it with glowing runs, fire it for double points.</li>
+        <li><b>Mix and Beats tabs</b>: a full two-deck controller with lessons, and a beat pad with its own trainer.</li>
       </ul>
       <button class="btn-start" id="tut-play"><svg><use href="#i-play"/></svg><span>PLAY YOUR FIRST SET</span></button>
       <button class="link-btn" data-close>Look around first</button>
@@ -378,10 +421,43 @@
     </div>
   </div>
 
+  <div class="overlay" id="ov-tracks" role="dialog" aria-modal="true" aria-labelledby="tracks-title" hidden>
+    <div class="sheet">
+      <h2 class="display" id="tracks-title">LOAD A TRACK</h2>
+      <p class="note">Tracks within about 10% of each other’s tempo can be beatmatched.</p>
+      <div class="track-list" id="track-list"></div>
+      <div class="sheet-actions"><button class="btn" data-close>Cancel</button></div>
+    </div>
+  </div>
+
+  <div class="overlay" id="ov-school" role="dialog" aria-modal="true" aria-labelledby="school-title" hidden>
+    <div class="sheet sheet-school">
+      <h2 class="display" id="school-title">DJ SCHOOL</h2>
+      <div class="school-cols">
+        <div><div class="eyebrow">LESSONS · ONE PER CONTROL</div><div class="lesson-list" id="mix-lessons"></div></div>
+        <div><div class="eyebrow">GIGS · SCORED TRANSITIONS</div><div class="gig-list" id="mix-gigs"></div>
+          <p class="note">A gig starts with Deck A playing. Mix into Deck B before A runs out. You are scored on beatmatching, phrasing, bass swap, levels and the finish.</p></div>
+      </div>
+      <div class="sheet-actions"><button class="btn" id="school-free">FREE MIX</button><button class="btn" data-close>Close</button></div>
+    </div>
+  </div>
+
+  <div class="overlay" id="ov-gig" role="dialog" aria-modal="true" aria-labelledby="gig-grade" hidden>
+    <div class="sheet sheet-results">
+      <div class="res-left"><div class="eyebrow" id="gig-name"></div><div class="res-grade" id="gig-grade">A</div><div class="res-title" id="gig-title"></div></div>
+      <div class="res-right">
+        <div class="res-score"><small>MIX SCORE</small><b id="gig-score">0</b><span class="badge" id="gig-pb" hidden>NEW BEST</span></div>
+        <div class="res-bars" id="gig-bars"></div>
+        <ul class="gig-tips" id="gig-tips"></ul>
+        <div class="sheet-actions"><button class="btn" id="gig-retry"><svg><use href="#i-retry"/></svg>RETRY</button><button class="btn-start small" id="gig-menu"><span>GIGS</span></button></div>
+      </div>
+    </div>
+  </div>
+
   <div class="overlay" id="ov-confirm" role="dialog" aria-modal="true" aria-labelledby="confirm-title" hidden>
     <div class="sheet sheet-small">
       <h2 class="display" id="confirm-title">RESET CAREER?</h2>
-      <p>This clears stars, personal bests and grades on this device. Settings stay.</p>
+      <p>This clears stars, personal bests, grades, lesson ticks and gig scores on this device. Settings stay.</p>
       <div class="sheet-actions"><button class="btn" data-close>Cancel</button><button class="btn btn-danger" id="confirm-yes">Reset</button></div>
     </div>
   </div>
@@ -391,11 +467,15 @@
 
 <script src="js/util.js"></script>
 <script src="js/sounds-manifest.js"></script>
+<script src="js/tracks-manifest.js"></script>
 <script src="js/engine.js"></script>
 <script src="js/assets.js"></script>
 <script src="js/music.js"></script>
 <script src="js/game.js"></script>
 <script src="js/beatpad.js"></script>
+<script src="js/decks.js"></script>
+<script src="js/school.js"></script>
 <script src="js/ui.js"></script>
+<script src="js/mixui.js"></script>
 </body>
 </html>

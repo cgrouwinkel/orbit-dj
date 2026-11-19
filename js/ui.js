@@ -20,12 +20,16 @@
   function showView(name) {
     if (name === view) return;
     if (view === 'play' && G.state === 'running') { G.pause('user'); O.toast('Set paused'); }
+    if (view === 'mix' && name !== 'mix') { O.decks.stopAll(); if (O.school.active) O.school.stop(); }
+    if (name === 'mix') { if (G.state === 'running' || G.state === 'paused') G.stop(); G.stopDemo(); if (BP.playing) BP.stop(); }
     view = name;
+    document.documentElement.classList.toggle('in-mix', name === 'mix');
     $$('.view').forEach(v => v.classList.toggle('is-active', v.id === 'view-' + name));
     $$('.tab').forEach(t => { const on = t.dataset.view === name; t.classList.toggle('is-active', on); t.setAttribute('aria-selected', String(on)); });
     if (name === 'career') renderCareer();
     if (name === 'settings') renderSettings();
     if (name === 'pads') { renderBP(); BP.loadKit(); }
+    if (name === 'mix' && O.mixui) O.mixui.enter();
     requestAnimationFrame(() => { resizeCanvases(); wake(); });
   }
   $$('[data-view]').forEach(b => b.addEventListener('click', () => showView(b.dataset.view)));
@@ -676,7 +680,12 @@
       card.append(play);
       grid.append(card);
     });
+    const SC = O.school, gigs = Object.values(SC.progress.gigs);
+    $('#car-mix').textContent = Object.keys(SC.progress.mix).length + '/' + SC.LESSONS.length + ' lessons · ' + gigs.length + '/' + SC.GIGS.length + ' gigs' + (gigs.length ? ' · best ' + Math.max(...gigs.map(g => g.score)) : '');
+    $('#car-beat').textContent = Object.keys(SC.progress.beat).length + '/' + SC.BEAT_LESSONS.length + ' lessons';
   }
+  $('#car-mix-go').addEventListener('click', () => { showView('mix'); O.mixui.openSchool(); });
+  $('#car-beat-go').addEventListener('click', () => { showView('pads'); const t = document.querySelector('[data-bptab="train"]'); if (t) t.click(); });
   function playVenue(i) {
     G.select(i);
     showView('play');
@@ -729,7 +738,7 @@
   $('#set-calib').addEventListener('click', () => openOverlay('ov-calib'));
   $('#set-intro').addEventListener('click', () => openOverlay('ov-intro'));
   $('#set-reset').addEventListener('click', () => openOverlay('ov-confirm'));
-  $('#confirm-yes').addEventListener('click', () => { G.resetProgress(); closeOverlay('ov-confirm'); O.toast('Career progress reset.'); renderCareer(); });
+  $('#confirm-yes').addEventListener('click', () => { G.resetProgress(); O.school.resetProgress(); closeOverlay('ov-confirm'); O.toast('Career progress reset.'); renderCareer(); });
   O.on('audio-state', () => { if (view === 'settings') renderAudioStatus(); });
 
   // ---------- theme + motion ----------
@@ -738,7 +747,7 @@
     h.className = (name === 'aero' ? 'theme-aero' : 'theme-grunge') + (reduce ? ' reduce-motion' : '');
     S.setRaw('orbitArcadeTheme', name === 'aero' ? 'aero' : 'grunge');
     const meta = document.querySelector('meta[name=theme-color]'); if (meta) meta.content = name === 'aero' ? '#03224c' : '#0b0a0e';
-    readPalette(); drawHighway(); drawSpectrum();
+    readPalette(); drawHighway(); drawSpectrum(); O.emit('theme', name);
     if (view === 'settings') renderSettings();
   }
   function setMotion(reduce) {
@@ -974,7 +983,9 @@
       drawHighway(); updateStageMsg(); drawSpectrum(); if (G.state === 'running') renderHype();
       $('#progress').style.width = (G.state === 'running' || G.state === 'paused' ? O.clamp(G.songTime() / G.DURATION * 100, 0, 100) : G.state === 'finished' ? 100 : 0) + '%';
     } else if (view === 'pads') { drawLCD(false); }
-    const busy = G.state === 'running' || M.playing || BP.playing;
+    else if (view === 'mix' && O.mixui) O.mixui.frame();
+    O.decks.tick(); O.school.tick();
+    const busy = G.state === 'running' || M.playing || BP.playing || O.decks.anyPlaying() || (view === 'mix' && !!O.school.active) || (view === 'pads' && !!O.school.beatActive);
     if (busy || performance.now() < wakeUntil) raf = requestAnimationFrame(loop);
   }
 

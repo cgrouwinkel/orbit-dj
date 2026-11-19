@@ -50,7 +50,7 @@ const autoPlay = page => page.evaluate(() => new Promise(res => {
     Object.values(S.kits).forEach(k => k.forEach(d => paths.push(d.path))); paths.push(...A.allInstPaths(), ...Object.values(S.fx));
     await A.ensure(paths); return { total: paths.length, decoded: paths.filter(p => A.get(p)).length };
   });
-  check('Every sound file loads and decodes (kits, instruments, fx, v1 chops)', lib.total === 126 && lib.decoded === lib.total, lib);
+  check('Every sound file loads and decodes (kits, instruments, fx, v1 chops)', lib.total === 137 && lib.decoded === lib.total, lib);
 
   current = 'Music + charts';
   const follow = await page.evaluate(async () => {
@@ -59,9 +59,9 @@ const autoPlay = page => page.evaluate(() => new Promise(res => {
     Syn.kit = function (c, dest, kit, pad, t, o) { log.push({ pad, t, vel: o && o.vel }); return orig.apply(this, arguments); };
     for (const diff of ['easy', 'expert']) {
       G.select(2); G.setDifficulty(diff); log = [];
-      await G.start(); await new Promise(r => setTimeout(r, 4500 + G.leadIn * 1000));
+      await G.start(); await new Promise(r => setTimeout(r, 9000 + G.leadIn * 1000));
       const sty = ORBIT.music.STYLES[G.styleFor()], laneEl = ['kick', 'snare', 'hat', 'fx'];
-      const due = G.notes.filter(n => n.t < G.songTime() - 0.3);
+      const due = G.notes.filter(n => n.t < G.songTime() - 0.3 && !n.dur); // hold notes are not drum hits
       let matched = 0;
       for (const n of due) { if (log.some(h => Math.abs(h.t - (G.startAt + n.t)) < 0.0015 && h.pad === n.pad)) matched++; }
       out[diff] = { notes: due.length, backingPlaysThem: matched };
@@ -241,8 +241,17 @@ const autoPlay = page => page.evaluate(() => new Promise(res => {
   });
   const worst = Math.max(...Object.values(gain).map(g => g.masterPeakDb));
   check('Master never clips with music + 4 pads + sampler spam (peak < 0 dBFS)', worst < 0, gain);
-  const rms = Object.values(gain).map(g => g.musicRmsDb);
-  check('Backing loudness consistent across venues (within 4 dB)', Math.max(...rms) - Math.min(...rms) <= 4, rms);
+  // v3: songs have quiet intros and loud drops, so compare whole songs rendered offline rather than the first seconds live
+  const rms = await page.evaluate(async () => {
+    const M = ORBIT.music, G = ORBIT.game, out = [];
+    for (const v of G.VENUES) {
+      await ORBIT.assets.ensure(M.assetsFor(v.style)); const bars = G.barsFor(v.bpm), b = await M.renderOffline(v.style, v.bpm, bars * 240 / v.bpm + 0.45, { guide: 1, form: bars, preLimiter: true });
+      let s = 0, n = 0; for (let c = 0; c < b.numberOfChannels; c++) { const d = b.getChannelData(c); for (let i = 0; i < d.length; i++) { s += d[i] * d[i]; n++; } }
+      out.push(+(10 * Math.log10(s / n)).toFixed(1));
+    }
+    return out;
+  });
+  check('Whole-song loudness consistent across the four venues (within 3 dB)', Math.max(...rms) - Math.min(...rms) <= 3, rms);
 
   // ---------------------------------------------------------------- beat pad
   current = 'Beat pad';

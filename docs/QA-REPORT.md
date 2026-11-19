@@ -1,4 +1,116 @@
-# ORBIT DJ — QA report (v2.2.0 update on top of the v2.1.0 report)
+# ORBIT DJ — QA report (v3.0.0 on top of the v2.2.0 and v2.1.0 reports)
+
+## v3.0.0 automated results: 72 / 72 (Mix tab, school, trainer) and 103 / 103 (everything else)
+
+**Date:** 2026-11-18 · **Tested:** the repo root served locally (the same files GitHub Pages serves), headless Chrome via Playwright with touch emulation at iPhone landscape sizes.
+**Not tested:** Safari/WebKit and any physical iPhone, iPad or Android device. No person has listened to the new songs or used the controller by hand; the lessons and gigs were played by scripts calling the same functions the buttons call, plus a handful of real touch events.
+
+`tests/qa-mix.js` (new):
+
+**Tracks**
+
+- ✅ Six tracks load and decode
+- ✅ Beat 1 is found after the MP3 padding (0.04–0.12 s in)
+- ✅ Downbeats in the drums-only mix-in sit on the detected beat grid (within 12 ms on average)
+- ✅ Every track has a drums-only mix-in and mix-out and 8-bar phrasing
+
+**Decks**
+
+- ✅ Deck plays at 1.00× on the audio clock and makes sound
+- ✅ Tempo fader: +10% plays 10% faster and reads 136.4 BPM
+- ✅ CUE returns to the cue point and stops; holding CUE previews and snaps back
+- ✅ SYNC matches tempo and lines the beats up within 5 ms, and stays locked
+- ✅ A synced deck follows the other deck’s tempo fader
+- ✅ Nudge (+) moves the beat earlier by about 30 ms per half second
+- ✅ 4-beat loop is 4 beats long, holds the playhead, halves to 1 beat and exits
+- ✅ Loop roll slips: on release the deck is where it would have been (within 30 ms)
+- ✅ Hot cue jumps back to its marker; beat jump +4 moves exactly 4 beats
+- ✅ Jog on a stopped deck scrubs (a quarter turn forward, a tenth back = 0.27 s)
+
+**Mixer**
+
+- ✅ LOW kill removes at least 18 dB below 150 Hz; HI kill at least 18 dB of the top end
+- ✅ FILTER: left is a low-pass (highs drop), right is a high-pass (bass drops)
+- ✅ Channel fader down silences the deck; crossfader to B removes deck A; centre plays it in full
+- ✅ High GAIN pushes the channel meter into the red (above 1.05)
+- ✅ Echo out: with the fader down the echo tail is still audible, then dies away
+- ✅ Split cue, reverb, flanger and sampler pads run without errors
+
+**Lessons**
+
+- ✅ 14 controller lessons, each with a scripted player for every step
+- ✅ Lesson "transport": every step passes when the move is made, and completion is saved
+- ✅ Lesson "levels": every step passes when the move is made, and completion is saved
+- ✅ Lesson "xf": every step passes when the move is made, and completion is saved
+- ✅ Lesson "tempo": every step passes when the move is made, and completion is saved
+- ✅ Lesson "jog": every step passes when the move is made, and completion is saved
+- ✅ Lesson "sync": every step passes when the move is made, and completion is saved
+- ✅ Lesson "eq": every step passes when the move is made, and completion is saved
+- ✅ Lesson "filter": every step passes when the move is made, and completion is saved
+- ✅ Lesson "loop": every step passes when the move is made, and completion is saved
+- ✅ Lesson "hotcue": every step passes when the move is made, and completion is saved
+- ✅ Lesson "roll": every step passes when the move is made, and completion is saved
+- ✅ Lesson "fx": every step passes when the move is made, and completion is saved
+- ✅ Lesson "cue": every step passes when the move is made, and completion is saved
+- ✅ Lesson "mix": every step passes when the move is made, and completion is saved
+- ✅ Lesson steps do not pass by themselves
+- ✅ Transition lesson: a start on bar 1 lands within half a beat of the phrase
+- ✅ Transition lesson: starting B mid-phrase is caught with a retry message
+- ✅ Coach strip shows the lesson step
+
+**Gigs**
+
+- ✅ Clean synced transition scores an A or S
+- ✅ Results sheet opens with the grade
+- ✅ Results sheet with tips fits on an iPhone landscape screen, buttons included
+- ✅ No-SYNC gig refuses the SYNC button
+- ✅ Unmatched, mid-phrase, double-bass mix scores under 50 with tips
+- ✅ Manual beatmatch (tempo fader + nudge, no SYNC) scores an A or S
+- ✅ Best gig scores are saved
+
+**Touch controls**
+
+- ✅ PLAY button starts the deck
+- ✅ Dragging the LOW knob down turns it down
+- ✅ Dragging the crossfader right moves it to B
+- ✅ Dragging the tempo fader down speeds the deck up
+- ✅ LOOP button sets a loop
+- ✅ Pad 1 stores a hot cue and lights up
+- ✅ Leaving the Mix tab stops the decks
+
+**Layout**
+
+- ✅ iPhone landscape 844×390: whole controller on screen, no scrolling
+- ✅ iPhone landscape 844×390: transport buttons at least 34 pt, knobs at least 26 pt, jog at least 90 pt
+- ✅ iPhone SE landscape 667×375: whole controller on screen, no scrolling
+- ✅ iPhone SE landscape 667×375: transport buttons at least 34 pt, knobs at least 26 pt, jog at least 90 pt
+- ✅ iPhone Pro Max landscape 932×430: whole controller on screen, no scrolling
+- ✅ iPhone Pro Max landscape 932×430: transport buttons at least 34 pt, knobs at least 26 pt, jog at least 90 pt
+- ✅ Theme switch keeps the Mix tab working
+- ✅ Mix: no console errors
+
+**Beat trainer**
+
+- ✅ 7 beat-making lessons, each with a scripted player for every step
+- ✅ Beat lesson "four" completes when the moves are made, and is saved
+- ✅ Beat lesson "backbeat" completes when the moves are made, and is saved
+- ✅ Beat lesson "finger" completes when the moves are made, and is saved
+- ✅ Beat lesson "record" completes when the moves are made, and is saved
+- ✅ Beat lesson "repeat" completes when the moves are made, and is saved
+- ✅ Beat lesson "levels16" completes when the moves are made, and is saved
+- ✅ Beat lesson "arrange" completes when the moves are made, and is saved
+- ✅ Finger drumming ignores hits that are off the beat
+- ✅ Beat coach shows on the LCD
+- ✅ Beat trainer: no console errors
+
+**Notes**
+- Three checks in `tests/qa.js` changed for the arranged songs: the sound-file count (137), the "notes are real drum hits" check now ignores hold notes, and loudness consistency is measured over whole songs rendered offline (the old check sampled the first seconds, which are now a quiet intro).
+- Gig scoring was exercised with three scripted mixes: a clean synced transition (100), a deliberate train wreck (31) and a manual beatmatch with tempo fader and nudge (100).
+- Beat grid: after MP3 decoding, downbeats sit within 3 ms of the detected grid on average in Chrome. Safari's MP3 decoder pads differently, which is why the app detects beat 1 from the audio instead of trusting a fixed offset; that path is untested on Safari.
+
+---
+
+# v2.2.0 report
 
 ## 0. v2.2.0 automated results: 103 / 103 passed
 

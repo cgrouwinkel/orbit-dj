@@ -6,9 +6,11 @@ A free, open-source DJ-learning rhythm game and beat pad for the browser, built 
 
 **Play:** https://cgrouwinkel.github.io/orbit-dj/ (in Safari: Share → *Add to Home Screen*, then play in landscape)
 
-## What's in it (v2.2.0)
-- **Tutorial on first open:** five short hands-on drills (kick, snare, full beat, hold notes, HYPE). Skippable; replay it from Setup.
-- **Band-game play:** round gems on a perspective highway, hold notes, a HYPE meter you charge with glowing runs and fire for double points, a crowd meter that can end the set on Club and Headliner (never on Rookie), streak multiplier up to ×4, and minute-long sets with a finale.
+## What's in it (v3.0.0)
+- **Mix tab, a two-deck DJ controller:** jog wheels, tempo faders, SYNC, CUE, loops, hot cues, loop roll, beat jump, sampler pads, 3-band EQ, filter, gain, channel faders, crossfader, FX and headphone split cue, with scrolling waveforms.
+- **DJ school:** 14 lessons (one per control) that check what you actually do, plus 4 scored transition gigs.
+- **Beat trainer:** 7 beat-making lessons on the beat pad.
+- **Rhythm game:** tutorial on first open, round gems on a perspective highway, hold notes, HYPE, crowd meter, minute-long sets.
 - **Career:** four venues (Bedroom DJ, House Party, Underground Club, Main Stage), each with its own original song. Notes are charted from the song's real kick, snare and hat parts. Rookie, Club and Headliner difficulties, stars, grades and personal bests.
 - **DJ controls, revealed gradually:** pads, cue, play/pause, crossfader, low EQ and filter. Each has a briefing with a before/after sound demo, best practice, common mistakes and a scored challenge.
 - **Beat pad (MPC-style):**
@@ -19,7 +21,7 @@ A free, open-source DJ-learning rhythm game and beat pad for the browser, built 
 - **Original audio only:** every sound is synthesized from scratch by `tools/make_sounds.py`. No recordings, samples or artist material.
 - **Mobile audio reliability:** works with the iPhone silent switch, recovers from calls and app switching, judges timing on the audio clock, has a tap-test latency calibration and works offline as a PWA.
 
-The crossfader currently blends layers of one song; true two-deck mixing is on the roadmap.
+The Play tab's crossfader blends layers of one song; the Mix tab is the real two-deck setup. There is no key lock, track import or recording yet.
 
 ## Repo layout
 | Path | What |
@@ -28,7 +30,8 @@ The crossfader currently blends layers of one song; true two-deck mixing is on t
 | `docs/` | Changelog, QA report, iPhone deploy guide, developer handoff |
 | `tools/make_sounds.py` | Regenerates the sound library (`sounds/`, `js/sounds-manifest.js`) |
 | `tools/build.py` | Builds a Netlify ZIP, a standalone single-file HTML and a source ZIP into `dist/` |
-| `tests/qa.js` | 103 automated checks (Playwright + Chrome) |
+| `tests/qa.js`, `tests/qa-mix.js` | Automated checks (Playwright + Chrome): rhythm game, audio and beat pad; Mix tab, lessons, gigs and beat trainer |
+| `tools/render_tracks.js` | Renders the six deck tracks to `tracks/*.mp3` with the app's own engine (needs ffmpeg) |
 | `scriptable/` | Optional iPhone Scriptable launcher |
 
 ## Deploy

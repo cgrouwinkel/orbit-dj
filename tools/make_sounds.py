@@ -226,6 +226,56 @@ def vox(f, dur=1.4, vowel='a', seed=14):
     y = sum(g * resonator(src, F, F / bw) for F, bw, g in formants)
     a = np.minimum(1, t / 0.04) * env(dur, 1.6, 0.001)
     return fade(sat(y * a * 2.0, 1.2), 50)
+def piano(f, dur=2.6):
+    """Additive piano: stretched partials, two detuned strings, faster decay up the series, soft hammer thump."""
+    t = T(dur); x = np.zeros_like(t); B = 0.00035; base = 2.6 * (220.0 / f) ** 0.4
+    for k in range(1, 40):
+        fk = f * k * np.sqrt(1 + B * k * k)
+        if fk > 9500: break
+        amp = (0.35 + 0.65 * abs(np.sin(np.pi * k / 8.3))) / k ** 1.15
+        tau = base / (1 + 0.32 * (k - 1))
+        e = 0.7 * np.exp(-t / (tau * 0.28)) + 0.3 * np.exp(-t / (tau * 1.6))
+        for det, ph in ((-0.0006, 0.0), (0.0007, 1.7)):
+            x += 0.5 * amp * np.sin(2 * np.pi * fk * (1 + det) * t + ph * k) * e
+    thump = lp(noise(dur, 31), 900) * np.exp(-t / 0.012) * 0.5
+    a = np.minimum(1, t / 0.0025)
+    return fade(sat((x + thump) * a * 0.9, 1.15), 40)
+def guitar(f, dur=1.9, seed=21):
+    """Plucked nylon-string guitar (Karplus-Strong) with pick-position comb and a little body resonance."""
+    n = max(2, int(round(SR / f))); buf = lp(np.random.default_rng(seed).uniform(-1, 1, n), 3200, 1)
+    buf = buf - 0.55 * np.roll(buf, max(1, n // 5))
+    out = np.zeros(int(dur * SR)); d = 0.9982
+    for i in range(len(out)):
+        j = i % n; v = buf[j]; buf[j] = d * (0.52 * v + 0.48 * buf[(j + 1) % n]); out[i] = v
+    out = out + 0.22 * resonator(out, 105, 3) + 0.18 * resonator(out, 215, 4)
+    return fade(lp(out, 5200) * np.minimum(1, T(dur) / 0.002), 40)
+def strings(f, dur=3.4, seed=22):
+    """String ensemble: detuned saws with independent vibrato, bowed-string formants, slow attack."""
+    r = np.random.default_rng(seed); t = T(dur); x = np.zeros_like(t)
+    for i, c in enumerate((-17, -9, -3, 2, 8, 15)):
+        vib = 1 + 0.0035 * np.sin(2 * np.pi * (4.6 + 0.35 * i) * t + r.uniform(0, 6)) * np.clip((t - 0.15) / 0.4, 0, 1)
+        ph = 2 * np.pi * f * 2 ** (c / 1200) * np.cumsum(vib) / SR + r.uniform(0, 6)
+        x += sum(((-1) ** (k + 1)) * np.sin(k * ph) / k for k in range(1, int(min(40, 7000 // f)) + 1))
+    x = lp(x / 6, 4200, 2) + 0.35 * resonator(x / 6, 1100, 3) + 0.2 * resonator(x / 6, 2900, 4)
+    a = np.minimum(1, t / 0.16) * np.minimum(1, (dur - t) / 0.5)
+    return fade(hp(x, 140) * a, 60)
+def lead(f, dur=1.6):
+    """Bright unison lead: seven detuned saws, filter envelope, late vibrato."""
+    t = T(dur); vib = 1 + 0.006 * np.sin(2 * np.pi * 5.4 * t) * np.clip((t - 0.25) / 0.3, 0, 1)
+    x = np.zeros_like(t)
+    for i, c in enumerate((-22, -13, -6, 0, 6, 13, 22)):
+        ph = 2 * np.pi * f * 2 ** (c / 1200) * np.cumsum(vib) / SR + i * 0.9
+        x += sum(((-1) ** (k + 1)) * np.sin(k * ph) / k for k in range(1, int(min(48, 9000 // f)) + 1))
+    x = x / 7 + 0.1 * np.sin(np.pi * f * t)
+    cut = 1400 + 5200 * np.exp(-t / 0.35)
+    return fade(svf_lowpass(x, cut, 0.3) * env(dur, 1.3, 0.004), 40)
+def scratch_src(dur=1.1):
+    """Sustained synthetic 'aah' used as the jog-wheel scratch sample (original; not from any record)."""
+    t = T(dur); f = 196 * (1 + 0.05 * np.sin(2 * np.pi * 1.1 * t))
+    ph = 2 * np.pi * np.cumsum(f) / SR
+    src = sum(((-1) ** (k + 1)) * np.sin(k * ph) / k for k in range(1, 40)) + noise(dur, 33) * 0.05
+    y = resonator(src, 760, 9) + 0.55 * resonator(src, 1150, 11) + 0.3 * resonator(src, 2500, 18) + noise(dur, 34) * 0.01
+    return fade(sat(y * 2.0, 1.4) * np.minimum(1, t / 0.02) * np.minimum(1, (dur - t) / 0.05), 20)
 def stab_chord(fn, root, semis, dur=1.0):
     return sum(fn(mtof(root + s), dur) for s in semis) / len(semis)
 def scratch(dur=0.55):
@@ -307,6 +357,10 @@ INSTRUMENTS = {
   'bell':   (lambda m: bell(mtof(m), 1.8), (69, 81), 24000),
   'flute':  (lambda m: flute(mtof(m), 1.5), (69, 81), 24000),
   'vox':    (lambda m: vox(mtof(m), 1.2, 'a'), (57, 69), 24000),
+  'piano':  (lambda m: piano(mtof(m), 2.4), (48, 60, 72), 22050),
+  'guitar': (lambda m: guitar(mtof(m), 1.8), (52, 64), 22050),
+  'strings':(lambda m: strings(mtof(m), 3.4), (69, 76, 83), 22050),
+  'lead':   (lambda m: lead(mtof(m), 1.5), (69, 81), 24000),
 }
 
 
@@ -359,7 +413,7 @@ def main():
             save(os.path.join(OUT, 'inst', f'{inst}-{m}.wav'), x, rate)
         manifest['inst'][inst] = list(roots)
     for name, x, rate in (('vinyl', vinyl(), 22050), ('riser', norm(riser(), -3), 32000), ('impact', norm(taper(impact(), 0.6), -2), 32000),
-                          ('miss', norm(miss_scratch(), -4), 24000), ('crowd', norm(crowd(), -4), 22050)):
+                          ('miss', norm(miss_scratch(), -4), 24000), ('crowd', norm(crowd(), -4), 22050), ('scratch', norm(scratch_src(), -3), 24000)):
         save(os.path.join(OUT, 'fx', name + '.wav'), x, rate); manifest['fx'].append(name)
     # v1 melodic chop banks stay available as beat-pad kits (same files, same pattern bank names)
     v1_names = ['ROOT', 'MINOR', 'FIFTH', 'SEVENTH', 'OCTAVE', 'STAB', 'RESPONSE', 'BELL', 'CHOP A', 'CHOP B', 'CHOP C', 'CHOP D', 'LOW', 'MID', 'HIGH', 'FX']

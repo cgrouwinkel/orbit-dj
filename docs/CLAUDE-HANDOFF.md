@@ -1,4 +1,4 @@
-# ORBIT DJ — Claude handoff (after v2.2.0, 2026-11-18)
+# ORBIT DJ — Claude handoff (after v3.0.0, 2026-11-18)
 
 ## Source of truth
 - This source bundle (`ORBIT-DJ-v2.1.0-source.zip`) replaces earlier bundles and `ORBIT-Arcade-Final-Prototype.zip`.
@@ -25,6 +25,15 @@ Personal iPhone only (no computer), deploys to Netlify from iPhone via ZIP uploa
 Storage keys: v1 keys kept (`orbitArcadeProgress`, `orbitArcadeTheme` (raw string), `orbitArcadeControllerBestV1`, `orbitArcadeCombinedV11`); new keys are prefixed `orbitV2*`.
 
 Sounds: `python3 tools/make_sounds.py` regenerates `sounds/` and `js/sounds-manifest.js` (deterministic). Build and test: `python3 tools/build.py`, serve `dist/site`, then `node tests/qa.js <url>` (set `PW` to the Playwright module path if needed): 103 checks. `tools/render_previews.js` renders listening previews with the app's own engine.
+
+## v3.0 additions (two decks, school, arranged songs)
+- **Songs:** `buildForm(name)` in music.js maps every bar of a set or track to `{ sec, pos, dk (drum groove), hb (which of the 8 written bars), bass, mel, lead, full }`. Forms: `24`, `32` (rhythm sets), `deck48`, `deck64` (deck tracks with `mixin` / `mixout`). Each style's `play(c, L, bar, step, t, beat, H, X)` reads `X` to decide which parts play. Extra grooves `I`, `K`, `R1`, `R2` are derived per style. `M.start({ form })`, `M.renderOffline(..., { form, tail, noBed })`, `M.sections(form)`.
+- **Deck tracks:** `tools/render_tracks.js` renders six tracks through `M.renderOffline` (pre-limiter, normalized to −16 dBFS RMS), encodes MP3 with ffmpeg and writes `js/tracks-manifest.js` (`window.ORBIT_TRACKS`: id, title, style, bpm, key, bars, sections). Re-run it after changing any song. MP3 decoders add padding, so `decks.js` re-detects beat 1 after decoding (`analyse()`).
+- **`js/decks.js` (`O.decks`):** deck state, `D.load/play/pause/toggle/seek`, `D.posOf` (audio-clock position incl. loop wrap), `D.cueDown/cueUp`, `D.setTempo`, `D.toggleSync` (+ quantized start in `D.play`), `D.nudge/bendTo/jog*`, `D.loopOn/Off/Scale`, `D.rollStart/End` (slip), `D.jump`, `D.hot`, pad modes (`D.padDown/padUp/setPadMode`), mixer (`D.set(i, name, v)`, `D.setXf`, `D.setFx`, `D.setSplit`, `D.level`), `D.phaseMs()`, `D.where(d)`. Sources are restarted for every seek / loop change; `startSrc(d, delay, keep)` with `keep` skips the 6 ms scheduling delay so phase-preserving operations do not drift. Graph is rebuilt on `audio-reset`.
+- **`js/school.js` (`O.school`):** `LESSONS` (steps `{ t, ok(A, B, mem), hold }`), `GIGS`, `startLesson/startGig/finishGig/stop`, `phraseDist`, `BEAT_LESSONS` (steps `{ t, ok(mem, keep), enter, count }`), `startBeat/stopBeat`, `tick()` (called every frame from ui.js). Progress key `orbitV3School`.
+- **`js/mixui.js` (`O.mixui`):** Mix view (custom knob / fader controls via `ctl()`), waveform canvas, coach strip, track picker, school and gig-result overlays, Beats TRAIN panel and LCD coach.
+- **Tests:** `tests/qa-mix.js` (72 checks) plays every lesson and three gigs with scripted moves. `tests/qa.js` (103 checks) covers the rest.
+- **Unfinished from an earlier pass:** `M.setRoll` (loop roll for the live backing) and `sounds/fx/scratch.wav` exist; the Play tab does not use `setRoll`.
 
 ## v2.2 additions (tutorial + band-game mechanics)
 - `M.chartSet(id, bpm, leadIn, bars, diff, stage)` builds a set chart: drum-part notes plus hold notes (`dur`, FX lane, back half of bar 4 of each phrase; whole fill bar above Rookie), HYPE phrases (`hype` = bar index, bars 2 and 6 of each phrase) and a `finale` note on the last downbeat. `M.chart` is kept for reference.

@@ -10,8 +10,8 @@ import base64, json, os, re, shutil, sys, zipfile
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DIST = os.path.join(ROOT, 'dist')
 SITE_FILES = ['index.html', 'manifest.webmanifest', 'sw.js', 'README.txt']
-SITE_DIRS = ['css', 'js', 'icons', 'samples', 'sounds']
-JS_ORDER = ['util.js', 'sounds-manifest.js', 'engine.js', 'assets.js', 'music.js', 'game.js', 'beatpad.js', 'ui.js']
+SITE_DIRS = ['css', 'js', 'icons', 'samples', 'sounds', 'tracks']
+JS_ORDER = ['util.js', 'sounds-manifest.js', 'tracks-manifest.js', 'engine.js', 'assets.js', 'music.js', 'game.js', 'beatpad.js', 'decks.js', 'school.js', 'ui.js', 'mixui.js']
 
 
 def version():
@@ -61,6 +61,7 @@ def build_standalone(v):
                 if f.endswith('.wav'):
                     rel = os.path.relpath(os.path.join(base, f), ROOT).replace(os.sep, '/')
                     samples[rel] = base64.b64encode(open(os.path.join(base, f), 'rb').read()).decode('ascii')
+    tracks = {'tracks/' + f: base64.b64encode(open(os.path.join(ROOT, 'tracks', f), 'rb').read()).decode('ascii') for f in sorted(os.listdir(os.path.join(ROOT, 'tracks'))) if f.endswith('.mp3')}
     icon = base64.b64encode(open(os.path.join(ROOT, 'icons', 'apple-touch-icon.png'), 'rb').read()).decode('ascii')
     html = html.replace('<link rel="manifest" href="manifest.webmanifest">\n', '')
     html = html.replace('href="icons/apple-touch-icon.png"', f'href="data:image/png;base64,{icon}"')
@@ -69,7 +70,7 @@ def build_standalone(v):
     scripts = re.compile(r'<script src="js/[a-z-]+\.js"></script>\n?')
     first = scripts.search(html)
     html = scripts.sub('', html)
-    inline = ('<script>window.ORBIT_STANDALONE = true;\nwindow.ORBIT_EMBEDDED_SAMPLES = ' + json.dumps(samples) + ';</script>\n'
+    inline = ('<script>window.ORBIT_STANDALONE = true;\nwindow.ORBIT_EMBEDDED_SAMPLES = ' + json.dumps(samples) + ';\nwindow.ORBIT_EMBEDDED_TRACKS = ' + json.dumps(tracks) + ';</script>\n'
               '<script>\n' + js.replace('</script', '<\\/script') + '\n</script>\n')
     html = html[:first.start()] + inline + html[first.start():]
     out = os.path.join(DIST, f'ORBIT-DJ-v{v}-standalone.html')
@@ -101,6 +102,7 @@ if __name__ == '__main__':
         names = z.namelist()
     assert 'index.html' in names, 'index.html must be at the ZIP root'
     assert sum(n.startswith('samples/') for n in names) == 48, 'expected 48 v1 chop samples'
-    assert sum(n.startswith('sounds/') and n.endswith('.wav') for n in names) == 78, 'expected 78 sounds'
+    assert sum(n.startswith('sounds/') and n.endswith('.wav') for n in names) == 89, 'expected 89 sounds'
+    assert sum(n.startswith('tracks/') and n.endswith('.mp3') for n in names) == 6, 'expected 6 deck tracks'
     for p in (netlify_zip, standalone, source):
         print(f'{os.path.relpath(p, ROOT)}  {os.path.getsize(p) / 1024:.0f} KB')

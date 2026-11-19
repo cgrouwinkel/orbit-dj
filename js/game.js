@@ -183,7 +183,7 @@
     M.start(Object.assign({ style: G.setStyleLocked, bpm: G.bpm(), origin: G.startAt + G.leadIn, countIn: true, endAt: G.startAt + G.songEnd() - 0.01 }, music));
     holdScreen();
   }
-  const setMusic = () => ({ mode: 'set', guide: G.guideLevel(), chartRule: chartRule() });
+  const setMusic = () => ({ mode: 'set', guide: G.guideLevel(), chartRule: chartRule(), form: G.bars });
   const drillMusic = () => ({ mode: 'bare', click: true });
 
   G.start = async function () {
