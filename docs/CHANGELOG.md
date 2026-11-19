@@ -1,5 +1,38 @@
 # ORBIT DJ — Changelog
 
+## v2.2.0 — 2026-11-18 (first-run tutorial + band-game gameplay)
+
+### New: hands-on tutorial on first open
+- New players land on a welcome card straight away; one tap starts five short drills over a metronome: **kick**, **snare**, **full beat**, **hold notes**, **HYPE**.
+- Each drill has a small goal (for example "4 kicks"). If you don't reach it, the drill simply repeats; nothing fails and nothing is saved to your career.
+- A coach strip at the top of the highway shows the step, the instruction and your progress, with a **SKIP** button.
+- Ends on a short recap (crowd meter, multiplier, HYPE) and **PLAY YOUR FIRST SET** (Bedroom DJ, Rookie).
+- Replay any time from **Setup → Replay tutorial**. Existing players see it once after updating.
+- The first tap is required: phones do not allow a web page to start sound without one.
+
+### New: band-game mechanics
+- **Hold notes.** Notes with a tail: tap and keep holding. They pay out while held and play a riser build-up. Letting go early stops the payout but never breaks your streak.
+- **HYPE.** Runs of glowing notes charge the HYPE meter (25% per run). At 50% or more, tap the round HYPE button (or press H) for double points until the meter drains (a full meter lasts 8 bars).
+- **Crowd meter.** Hits fill it, misses and off-beat taps drain it. On Club and Headliner an empty meter ends the set ("the crowd walked out") and nothing is saved. Rookie never fails.
+- **Miss feedback.** A missed note plays a short record scratch and the melody and bass dip for a moment.
+- **Full-length sets.** Songs now run about a minute (24 or 32 bars, 55–65 s) instead of 24 s, and end on a finale hit with an impact and a crowd cheer that is louder the better you played.
+- **Streak and multiplier callouts**, a multiplier dial and the crowd meter drawn beside the lanes.
+- Results add best streak, holds completed and HYPE uses.
+
+### Highway restyle
+- Round note gems with a raised cap, ring targets on the hit line, sustain tails, flame bursts on hits (a held note keeps burning), gold glow on HYPE notes and on the whole highway while HYPE is active.
+- All artwork is drawn in code for ORBIT; nothing is taken from other games.
+
+### Unchanged on purpose
+- Points per note (150 / 100 / 65 × multiplier up to ×4), timing windows, star thresholds, the 1000-point combined grade and all saved-progress keys.
+- Because sets are longer, new scores will be higher than v2.1 personal bests.
+
+### Sounds
+- Two new original fx: `miss.wav` (scratch) and `crowd.wav` (synthesized cheer). Library is now 78 files; existing files are byte-identical.
+
+### Not yet verified
+- No iPhone or Safari testing has been done on this version. Hold notes (long press on the lane or pad) and the HYPE button are the things to check first on a real phone.
+
 ## v2.1.0 — 2026-11-18 (real beat pad + new music engine)
 
 ### New: MPC-style beat pad (Beats tab, replaces the 16-pad sampler)

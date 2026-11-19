@@ -310,6 +310,29 @@ INSTRUMENTS = {
 }
 
 
+def miss_scratch(dur=0.22):
+    """Short record-scratch 'wrong note' sound."""
+    t = T(dur); f = 520 * np.exp(-t / 0.05) + 140 + 90 * np.sin(2 * np.pi * 14 * t)
+    ph = 2 * np.pi * np.cumsum(f) / SR
+    x = sum(((-1) ** (k + 1)) * np.sin(k * ph) / k for k in range(1, 18)) * 0.5
+    x = bp(x + noise(dur, 40) * 0.4, 700, 4200) * env(dur, 0.07, 0.003)
+    return fade(sat(x * 2.2, 1.6), 15)
+
+def crowd(dur=2.8):
+    """Original synthesized crowd cheer: formant-filtered noise 'voices' plus scattered claps."""
+    r = np.random.default_rng(41); t = T(dur); x = np.zeros_like(t)
+    for v in range(14):
+        f1, f2 = r.uniform(400, 850), r.uniform(1000, 2200)
+        src = noise(dur, 100 + v)
+        voice = resonator(src, f1, 6) + 0.6 * resonator(src, f2, 8)
+        swell = np.clip(np.sin(np.pi * np.clip((t - r.uniform(0, 0.3)) / r.uniform(1.6, 2.6), 0, 1)), 0, 1) ** 1.5
+        x += voice * swell * r.uniform(0.5, 1.0)
+    for _ in range(int(dur * 22)):
+        i = r.integers(0, len(t) - 400); c = bp(r.uniform(-1, 1, 400), 900, 3200) * np.exp(-np.arange(400) / 45)
+        x[i:i + 400] += c * r.uniform(0.6, 1.4) * 3
+    x *= np.minimum(1, t / 0.15) * np.minimum(1, (dur - t) / 0.9)
+    return fade(hp(x, 180), 60)
+
 def vinyl(dur=4.0):
     r = np.random.default_rng(30); x = lp(noise(dur, 31), 3200) * 0.012
     for _ in range(int(dur * 9)):
@@ -335,7 +358,8 @@ def main():
             x = norm(taper(fn(m), 0.7), -3.0)
             save(os.path.join(OUT, 'inst', f'{inst}-{m}.wav'), x, rate)
         manifest['inst'][inst] = list(roots)
-    for name, x, rate in (('vinyl', vinyl(), 22050), ('riser', norm(riser(), -3), 32000), ('impact', norm(taper(impact(), 0.6), -2), 32000)):
+    for name, x, rate in (('vinyl', vinyl(), 22050), ('riser', norm(riser(), -3), 32000), ('impact', norm(taper(impact(), 0.6), -2), 32000),
+                          ('miss', norm(miss_scratch(), -4), 24000), ('crowd', norm(crowd(), -4), 22050)):
         save(os.path.join(OUT, 'fx', name + '.wav'), x, rate); manifest['fx'].append(name)
     # v1 melodic chop banks stay available as beat-pad kits (same files, same pattern bank names)
     v1_names = ['ROOT', 'MINOR', 'FIFTH', 'SEVENTH', 'OCTAVE', 'STAB', 'RESPONSE', 'BELL', 'CHOP A', 'CHOP B', 'CHOP C', 'CHOP D', 'LOW', 'MID', 'HIGH', 'FX']

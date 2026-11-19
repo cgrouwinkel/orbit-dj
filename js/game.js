@@ -1,6 +1,9 @@
 /* ORBIT DJ v2 — career, rhythm gameplay, scoring, controller lessons and challenges.
- * Ported from the v1 Arcade prototype. Scoring formulas, star thresholds, timing windows,
- * note charts and saved-progress keys are unchanged so existing players keep their records.
+ * Ported from the v1 Arcade prototype. Per-note points, star thresholds, timing windows and
+ * saved-progress keys are unchanged so existing players keep their records.
+ * v2.2 adds band-game mechanics on top: hold notes, HYPE (charge with glowing phrases, fire for
+ * double points), a crowd meter that can end the set above Rookie, miss feedback, full-length
+ * sets with a finale hit, and short drills used by the first-run tutorial.
  */
 (function () {
   'use strict';
@@ -14,7 +17,22 @@
   ];
   const DIFFS = { easy: { label: 'ROOKIE', window: 0.19 }, normal: { label: 'CLUB', window: 0.13 }, expert: { label: 'HEADLINER', window: 0.085 } };
   const LANES = [{ name: 'KICK', key: 'f' }, { name: 'SNARE', key: 'j' }, { name: 'HAT', key: 'k' }, { name: 'FX', key: 'l' }];
-  const DURATION = 24, MISS_AFTER = 0.21;
+  const MISS_AFTER = 0.21, TAIL = 2.2;
+  // About a minute of music, rounded to whole 8-bar phrases.
+  const barsFor = bpm => Math.max(16, Math.round(58 / (240 / bpm) / 8) * 8);
+  const CROWD = { easy: { hit: 0.03, miss: 0.035, off: 0.015 }, normal: { hit: 0.03, miss: 0.045, off: 0.02 }, expert: { hit: 0.03, miss: 0.055, off: 0.03 } };
+  const STREAKS = [25, 50, 100, 150, 200, 300];
+
+  // Tutorial drills: tiny charts at 88 BPM over a metronome. notes(beat, leadIn) -> chart, pass(G) -> done.
+  const every = (L, b, bars, lane, beats, extra) => { const out = []; for (let bar = 0; bar < bars; bar++) for (const x of beats) out.push(Object.assign({ t: L + (bar * 4 + x) * b, lane, done: false }, extra && extra(bar))); return out; };
+  const DRILLS = {
+    kick: { bars: 4, notes: (b, L) => every(L, b, 4, 0, [0, 2]), pass: g => g.hits >= 4, goal: 4, count: g => g.hits },
+    snare: { bars: 4, notes: (b, L) => every(L, b, 4, 1, [1, 3]), pass: g => g.hits >= 4, goal: 4, count: g => g.hits },
+    beat: { bars: 4, notes: (b, L) => every(L, b, 4, 0, [0, 2]).concat(every(L, b, 4, 1, [1, 3]), every(L, b, 2, 2, [0.5, 2.5]).map(n => (n.t += 8 * b, n))), pass: g => g.hits >= 10, goal: 10, count: g => g.hits },
+    hold: { bars: 4, notes: (b, L) => every(L, b, 4, 3, [0], () => ({ dur: 2 * b })), pass: g => g.holdsDone >= 1, goal: 1, count: g => g.holdsDone },
+    hype: { bars: 4, notes: (b, L) => every(L, b, 4, 0, [0, 2], bar => ({ hype: bar })).concat(every(L, b, 4, 1, [1, 3], bar => ({ hype: bar }))), pass: g => g.hypeUses >= 1, goal: 1, count: g => g.hypeUses, phraseGain: 0.5 }
+  };
+  const DRILL_ORDER = ['kick', 'snare', 'beat', 'hold', 'hype'];
 
   // Controller education. Each entry covers: name, purpose, sound demo, best practice,
   // common mistakes, interactive challenge, and live feedback (see controlInput).
@@ -60,7 +78,7 @@
   const KEY_PROGRESS = 'orbitArcadeProgress', KEY_CTRL = 'orbitArcadeControllerBestV1', KEY_COMBINED = 'orbitArcadeCombinedV11';
 
   const G = (O.game = {
-    VENUES, DIFFS, LANES, LESSONS, STAGE_LESSONS, STAGE_CONTROLS, CHALLENGES, DURATION,
+    VENUES, DIFFS, LANES, LESSONS, STAGE_LESSONS, STAGE_CONTROLS, CHALLENGES, DRILLS, DRILL_ORDER, barsFor,
     stage: O.clamp(Number(S.get('orbitV2Stage', 0)) || 0, 0, 3),
     difficulty: DIFFS[S.get('orbitV2Difficulty', 'easy')] ? S.get('orbitV2Difficulty', 'easy') : 'easy',
     styleChoice: (v => (v === 'hiphop' ? 'boombap' : v === 'house' || v === 'dark' || v === 'auto' || window.ORBIT.music.STYLES[v] ? v : 'auto'))(S.get('orbitV2Style', 'auto')),
@@ -72,11 +90,16 @@
     progress: S.get(KEY_PROGRESS, {}) || {},
     ctrlBests: S.get(KEY_CTRL, {}) || {},
     combinedBests: S.get(KEY_COMBINED, {}) || {},
-    challenge: null, lastResult: null, pauseReason: ''
+    challenge: null, lastResult: null, pauseReason: '',
+    bars: barsFor(88), duration: 0, crowd: 0.5, hype: 0, hypeActive: false, hypeUses: 0, holdsDone: 0, holdsTotal: 0, holding: {}, phrases: {}, drill: null
   });
+  Object.defineProperty(G, 'DURATION', { get: () => G.duration || G.plannedDuration() });
 
-  G.bpm = () => VENUES[G.stage].bpm;
-  G.styleFor = () => M.resolve(G.styleChoice === 'auto' ? VENUES[G.stage].style : G.styleChoice);
+  G.bpm = () => (G.drill ? 88 : VENUES[G.stage].bpm);
+  G.styleFor = () => (G.drill ? 'boombap' : M.resolve(G.styleChoice === 'auto' ? VENUES[G.stage].style : G.styleChoice));
+  G.plannedDuration = () => { const b = 60 / G.bpm(); return Math.max(2.7, 4 * b + 0.3) + barsFor(G.bpm()) * 4 * b + TAIL; };
+  G.songEnd = () => G.leadIn + G.bars * 240 / G.bpm(); // song time of the finale hit
+  const FX = ['impact', 'crowd', 'miss', 'riser'];
   // How loudly the backing plays the drum hits you're supposed to play (timing assist).
   G.guideLevel = () => G.guideMode === 'off' ? 0 : G.guideMode === 'on' ? 0.55 : ({ easy: 0.5, normal: 0.28, expert: 0 })[G.difficulty];
   G.setGuide = function (m) { G.guideMode = m; S.set('orbitV2Guide', m); O.emit('guide', m); };
@@ -84,11 +107,11 @@
 
   // ---------- note chart (identical patterns to v1) ----------
   // v2.1: notes are charted from the song's own drum parts (see music.js chartAt).
-  function makeNotes(stage, level, leadIn) { return M.chart(G.styleFor(), VENUES[stage].bpm, leadIn, DURATION, level, stage); }
+  function makeNotes(stage, level, leadIn) { return M.chartSet(G.styleFor(), VENUES[stage].bpm, leadIn, barsFor(VENUES[stage].bpm), level, stage); }
   // v1 charts, kept for reference and tests.
   function makeNotesV1(stage, level, leadIn) {
     const b = 60 / VENUES[stage].bpm, list = [];
-    for (let n = 0; leadIn + n * b < DURATION - 1; n++) {
+    for (let n = 0; leadIn + n * b < 24 - 1; n++) {
       const t = leadIn + n * b;
       const lane = stage === 0 ? (n % 4 === 0 ? 0 : n % 4 === 2 ? 1 : 2)
         : stage === 1 ? (n % 4 === 0 ? 0 : n % 4 === 2 ? 1 : n % 2 ? 2 : 3)
@@ -139,7 +162,29 @@
   function resetRun() {
     G.score = G.combo = G.maxCombo = G.hits = G.misses = 0;
     G.counts = { perfect: 0, great: 0, good: 0, miss: 0, off: 0 };
+    dropHolds();
+    G.crowd = 0.5; G.hype = 0; G.hypeActive = false; G.hypeUses = 0; G.holdsDone = 0; G.failed = false;
+    G.holdsTotal = G.notes.filter(n => n.dur).length;
+    G.phrases = {};
+    for (const n of G.notes) if (n.hype !== undefined) { const ph = G.phrases[n.hype] || (G.phrases[n.hype] = { total: 0, hit: 0, dead: false }); ph.total++; }
+    holdCarry = 0; lastNow = null; lastMissFx = -9; finaleDone = false;
   }
+  let holdCarry = 0, lastNow = null, lastMissFx = -9, finaleDone = false;
+
+  // Shared by sets and drills: clock, state and backing track.
+  function launch(music) {
+    const c = E.ctx, beat = 60 / G.bpm();
+    G.leadIn = Math.max(2.7, 4 * beat + 0.3);
+    G.duration = G.leadIn + G.bars * 4 * beat + (G.drill ? 0.4 : TAIL);
+    G.startAt = c.currentTime + 0.15;
+    G.elapsed = 0;
+    G.state = 'running';
+    G.setStyleLocked = G.styleFor();
+    M.start(Object.assign({ style: G.setStyleLocked, bpm: G.bpm(), origin: G.startAt + G.leadIn, countIn: true, endAt: G.startAt + G.songEnd() - 0.01 }, music));
+    holdScreen();
+  }
+  const setMusic = () => ({ mode: 'set', guide: G.guideLevel(), chartRule: chartRule() });
+  const drillMusic = () => ({ mode: 'bare', click: true });
 
   G.start = async function () {
     if (O.sampler) O.sampler.stopAll();
@@ -148,21 +193,17 @@
     const ok = await E.ensureRunning();
     if (!ok) { O.emit('needs-audio', 'start'); return false; }
     O.emit('loading', true);
-    await O.assets.ensure(M.assetsFor(G.styleFor()), 2500);
+    G.drill = null;
+    await O.assets.ensure(M.assetsFor(G.styleFor()).concat(FX.map(O.assets.fxPath)), 2500);
     O.emit('loading', false);
     G.stop(true);
-    const c = E.ctx, beat = 60 / G.bpm();
-    G.leadIn = Math.max(2.7, 4 * beat + 0.3);
-    G.notes = makeNotes(G.stage, G.difficulty, G.leadIn);
+    const beat = 60 / G.bpm();
+    G.bars = barsFor(G.bpm());
+    G.notes = makeNotes(G.stage, G.difficulty, Math.max(2.7, 4 * beat + 0.3));
     resetRun();
     challengeReset();
     if (prepared) { G.challenge.cueReady = true; award('Cue prepared before set'); }
-    G.startAt = c.currentTime + 0.15;
-    G.elapsed = 0;
-    G.state = 'running';
-    G.setStyleLocked = G.styleFor();
-    M.start({ style: G.setStyleLocked, bpm: G.bpm(), origin: G.startAt + G.leadIn, mode: 'set', guide: G.guideLevel(), chartRule: chartRule(), countIn: true, endAt: G.startAt + DURATION });
-    holdScreen();
+    launch(setMusic());
     G.challenge.started = true;
     observe();
     O.emit('game-state', G.state);
@@ -170,8 +211,44 @@
     return true;
   };
 
+  // ---------- tutorial drills ----------
+  function drillRun() {
+    const d = G.drill, beat = 60 / 88;
+    G.bars = d.bars;
+    G.notes = d.notes(beat, Math.max(2.7, 4 * beat + 0.3)).sort((a, b) => a.t - b.t);
+    const keep = d.id === 'hype' && d.tries ? G.hype : 0; // a charged meter survives a retry
+    resetRun();
+    G.hype = keep;
+    d.passed = false; d.passAt = 0;
+    launch(drillMusic());
+    O.emit('game-state', G.state);
+    O.emit('stats');
+  }
+  G.startDrill = async function (id) {
+    if (!DRILLS[id]) return false;
+    if (O.sampler) O.sampler.stopAll();
+    const ok = await E.ensureRunning();
+    if (!ok) { O.emit('needs-audio', 'drill'); return false; }
+    G.stop(true);
+    G.drill = Object.assign({ id, tries: 0 }, DRILLS[id]);
+    await O.assets.ensure(M.assetsFor('boombap').concat(FX.map(O.assets.fxPath)), 2500);
+    if (!G.drill || G.drill.id !== id) return false; // tutorial was closed while loading
+    drillRun();
+    O.emit('drill', { id, status: 'start' });
+    return true;
+  };
+  G.endDrill = function () { if (!G.drill) return; G.drill = null; G.stop(); };
+  function drillUpdate(now) {
+    const d = G.drill;
+    if (!d.passed && d.pass(G)) { d.passed = true; d.passAt = now; O.emit('drill', { id: d.id, status: 'pass' }); }
+    if (d.passed && now > d.passAt + 1.3) { const id = d.id; G.drill = null; G.stop(); O.emit('drill', { id, status: 'done' }); return; }
+    if (!d.passed && now >= G.duration) { d.tries++; O.emit('drill', { id: d.id, status: 'retry', tries: d.tries }); drillRun(); }
+  }
+
   G.pause = function (reason) {
     if (G.state !== 'running') return;
+    if (G.drill) { G.endDrill(); O.emit('drill', { status: 'abort' }); return; }
+    dropHolds();
     G.elapsed = (E.ctx ? E.ctx.currentTime : 0) - G.startAt;
     G.heardAtPause = G.songTime();
     G.state = 'paused';
@@ -189,7 +266,8 @@
     G.startAt = c.currentTime + 0.35 - G.elapsed;
     G.state = 'running';
     G.pauseReason = '';
-    M.start({ style: G.setStyleLocked || G.styleFor(), bpm: G.bpm(), origin: G.startAt + G.leadIn, mode: 'set', guide: G.guideLevel(), chartRule: chartRule(), endAt: G.startAt + DURATION });
+    lastNow = null;
+    if (G.elapsed < G.songEnd() - 0.05) M.start(Object.assign({ style: G.setStyleLocked || G.styleFor(), bpm: G.bpm(), origin: G.startAt + G.leadIn, endAt: G.startAt + G.songEnd() - 0.01 }, setMusic()));
     holdScreen();
     O.emit('game-state', G.state);
     return true;
@@ -201,6 +279,9 @@
 
   G.stop = function (silent) {
     if (G.state === 'running') G.elapsed = E.ctx.currentTime - G.startAt;
+    dropHolds();
+    G.hypeActive = false;
+    if (!silent) G.drill = null;
     G.state = 'idle';
     M.stop();
     releaseScreen();
@@ -230,7 +311,7 @@
     G.tapSound(lane);
     O.emit('pad', lane);
     if (G.state !== 'running') return null;
-    const now = G.songTime(perfMs), win = DIFFS[G.difficulty].window;
+    const now = G.songTime(perfMs), win = G.drill ? DIFFS.easy.window : DIFFS[G.difficulty].window;
     let best = null, bestErr = Infinity;
     for (const n of G.notes) {
       if (n.done || n.lane !== lane) continue;
@@ -239,19 +320,96 @@
       if (n.t - now > win) break;
     }
     let kind;
-    if (!best) { G.combo = 0; G.counts.off++; kind = 'off'; }
-    else {
+    if (!best) {
+      if (now > G.songEnd() + 0.3) return null; // free taps over the outro
+      G.combo = 0; G.counts.off++; kind = 'off'; crowdMove(-CROWD[G.difficulty].off);
+    } else {
       best.done = true; best.hit = true;
       G.hits++; G.combo++; G.maxCombo = Math.max(G.maxCombo, G.combo);
       kind = bestErr < 0.055 ? 'perfect' : bestErr < 0.11 ? 'great' : 'good';
       G.counts[kind]++;
-      G.score += ({ perfect: 150, great: 100, good: 65 })[kind] * Math.min(4, 1 + Math.floor(G.combo / 8));
+      G.score += ({ perfect: 150, great: 100, good: 65 })[kind] * G.multiplier() * (G.hypeActive ? 2 : 1);
+      crowdMove(CROWD[G.difficulty].hit * (G.hypeActive ? 2 : 1));
+      if (best.hype !== undefined) phraseHit(best);
+      if (best.dur) startHold(best, lane);
+      if (STREAKS.includes(G.combo)) O.emit('streak', G.combo);
     }
-    O.emit('judge', { lane, kind, err: best ? now - best.t : 0 });
+    O.emit('judge', { lane, kind, err: best ? now - best.t : 0, hype: !!(best && best.hype !== undefined), hold: !!(best && best.dur) });
     observe();
     O.emit('stats');
     return kind;
   };
+
+  // ---------- hold notes ----------
+  function startHold(n, lane) {
+    let snd = null;
+    if (E.isRunning()) {
+      const buf = O.assets.get(O.assets.fxPath('riser'));
+      snd = Synth.oneShot(E.ctx, E.nodes.pads, O.assets.fxPath('riser'), E.ctx.currentTime + 0.005, 0.5);
+      if (snd && buf) snd.src.playbackRate.value = O.clamp(buf.duration / n.dur, 0.5, 2.5);
+    }
+    n.held = 0;
+    G.holding[lane] = { n, snd, last: n.t };
+  }
+  function endHold(lane, complete) {
+    const h = G.holding[lane]; if (!h) return;
+    delete G.holding[lane];
+    if (h.snd && E.ctx) { const t = E.ctx.currentTime; try { h.snd.gain.gain.setTargetAtTime(0, t, complete ? 0.06 : 0.025); h.snd.src.stop(t + 0.3); } catch (e) {} }
+    if (complete) { h.n.holdDone = true; G.holdsDone++; crowdMove(CROWD[G.difficulty].hit); } else h.n.dropped = true;
+    O.emit('hold', { lane, complete });
+  }
+  function dropHolds() { for (const lane of Object.keys(G.holding)) endHold(Number(lane), false); }
+  // Letting go early just stops the hold paying out; it never breaks the streak.
+  G.release = function (lane) {
+    const h = G.holding[lane]; if (!h || G.state !== 'running') return;
+    if (G.songTime() < h.n.t + h.n.dur - 0.12) endHold(lane, false);
+  };
+  function holdUpdate(now) {
+    for (const lane of Object.keys(G.holding)) {
+      const h = G.holding[lane], end = h.n.t + h.n.dur, cur = Math.min(now, end);
+      if (cur > h.last) {
+        holdCarry += (cur - h.last) / h.n.dur * 200 * G.multiplier() * (G.hypeActive ? 2 : 1);
+        h.n.held = (cur - h.n.t) / h.n.dur; h.last = cur;
+        const whole = Math.floor(holdCarry); if (whole) { G.score += whole; holdCarry -= whole; }
+      }
+      if (now >= end) endHold(Number(lane), true);
+    }
+  }
+
+  // ---------- HYPE ----------
+  function phraseHit(n) {
+    const ph = G.phrases[n.hype]; if (!ph || ph.dead) return;
+    if (++ph.hit >= ph.total) { G.hype = Math.min(1, G.hype + (G.drill && G.drill.phraseGain || 0.25)); O.emit('hype', { type: 'phrase', ready: G.hype >= 0.5 }); }
+  }
+  G.hypeReady = () => G.state === 'running' && !G.hypeActive && G.hype >= 0.5;
+  G.activateHype = function () {
+    if (!G.hypeReady()) return false;
+    G.hypeActive = true; G.hypeUses++;
+    if (E.isRunning()) { const t = E.ctx.currentTime + 0.005; Synth.oneShot(E.ctx, E.nodes.pads, O.assets.fxPath('impact'), t, 0.55); Synth.oneShot(E.ctx, E.nodes.pads, O.assets.fxPath('crowd'), t, 0.4); }
+    O.emit('hype', { type: 'on' });
+    O.emit('stats');
+    return true;
+  };
+  function hypeUpdate(dt) {
+    if (!G.hypeActive) return;
+    G.hype -= dt / (8 * 240 / G.bpm()); // a full meter lasts eight bars
+    if (G.hype <= 0) { G.hype = 0; G.hypeActive = false; O.emit('hype', { type: 'off' }); O.emit('stats'); }
+  }
+
+  // ---------- crowd ----------
+  function crowdMove(d) {
+    if (G.drill) return;
+    G.crowd = O.clamp(G.crowd + d, G.difficulty === 'easy' ? 0.06 : 0, 1);
+  }
+  G.canFail = () => G.difficulty !== 'easy' && !G.drill && !G.noFail; // noFail: test hook only
+  function missFx() {
+    if (G.drill || !E.isRunning()) return;
+    const t = E.ctx.currentTime;
+    if (t - lastMissFx < 0.45) return;
+    lastMissFx = t;
+    Synth.oneShot(E.ctx, E.nodes.pads, O.assets.fxPath('miss'), t + 0.005, 0.3);
+    M.dip(0.3, 0.2);
+  }
 
   G.multiplier = () => Math.min(4, 1 + Math.floor(G.combo / 8));
   G.accuracy = () => { const j = G.hits + G.misses; return j ? G.hits / j : null; };
@@ -264,38 +422,66 @@
     let changed = false;
     for (const n of G.notes) {
       if (n.t > now) break;
-      if (!n.done && now > n.t + MISS_AFTER) { n.done = true; G.misses++; G.counts.miss++; G.combo = 0; changed = true; O.emit('judge', { lane: n.lane, kind: 'miss', err: 0 }); }
+      if (!n.done && now > n.t + MISS_AFTER) {
+        n.done = true; G.misses++; G.counts.miss++; G.combo = 0; changed = true;
+        if (n.hype !== undefined && G.phrases[n.hype]) G.phrases[n.hype].dead = true;
+        crowdMove(-CROWD[G.difficulty].miss); missFx();
+        O.emit('judge', { lane: n.lane, kind: 'miss', err: 0 });
+      }
     }
+    const dt = lastNow === null ? 0 : Math.max(0, now - lastNow); lastNow = now;
+    holdUpdate(now);
+    hypeUpdate(dt);
     if (changed) O.emit('stats');
+    if (G.drill) { drillUpdate(now); return; }
     observe();
-    if (now >= DURATION) finish();
+    // Finale: the last downbeat lands with an impact, and the crowd answers as loudly as you earned.
+    if (!finaleDone && now >= G.songEnd() - 0.12) {
+      finaleDone = true;
+      if (E.isRunning()) {
+        const t = Math.max(E.ctx.currentTime + 0.005, G.startAt + G.songEnd());
+        Synth.oneShot(E.ctx, E.nodes.pads, O.assets.fxPath('impact'), t, 0.8);
+        Synth.oneShot(E.ctx, E.nodes.pads, O.assets.fxPath('crowd'), t + 0.08, 0.25 + 0.55 * G.crowd);
+      }
+      O.emit('finale');
+    }
+    if (G.canFail() && G.crowd <= 0) { finish(true); return; }
+    if (now >= G.duration) finish(false);
   };
 
-  function finish() {
+  function finish(failed) {
+    failed = failed === true;
+    dropHolds();
+    G.hypeActive = false;
+    G.failed = failed;
     G.state = 'finished';
     M.stop();
+    if (failed && E.isRunning()) Synth.oneShot(E.ctx, E.nodes.pads, O.assets.fxPath('miss'), E.ctx.currentTime + 0.01, 0.5);
     releaseScreen();
     const st = G.stage, diff = G.difficulty, key = st + ':' + diff;
     const total = G.hits + G.misses, accuracy = total ? G.hits / total : 0;
-    const stars = accuracy >= 0.92 ? 3 : accuracy >= 0.75 ? 2 : accuracy >= 0.5 ? 1 : 0;
+    const stars = failed ? 0 : accuracy >= 0.92 ? 3 : accuracy >= 0.75 ? 2 : accuracy >= 0.5 ? 1 : 0;
     const old = G.progress[st] || { score: 0, stars: 0 };
-    const newBest = G.score > (old.score || 0);
-    G.progress[st] = { score: Math.max(old.score || 0, G.score), stars: Math.max(old.stars || 0, stars) };
-    S.set(KEY_PROGRESS, G.progress);
+    const newBest = !failed && G.score > (old.score || 0);
+    if (!failed) {
+      G.progress[st] = { score: Math.max(old.score || 0, G.score), stars: Math.max(old.stars || 0, stars) };
+      S.set(KEY_PROGRESS, G.progress);
+    }
 
     const ctrl = G.challenge ? G.challenge.points : 0;
-    G.ctrlBests[key] = Math.max(G.ctrlBests[key] || 0, ctrl);
+    if (!failed) G.ctrlBests[key] = Math.max(G.ctrlBests[key] || 0, ctrl);
     S.set(KEY_CTRL, G.ctrlBests);
     const ctrlGrade = ctrl === 300 ? 'A' : ctrl >= 200 ? 'B' : ctrl >= 100 ? 'C' : 'INCOMPLETE';
 
     const rhythmPts = Math.round(accuracy * 700), equipmentPts = Math.round(ctrl / 300 * 300), combined = rhythmPts + equipmentPts;
-    const grade = combined >= 900 ? 'S' : combined >= 750 ? 'A' : combined >= 550 ? 'B' : combined >= 350 ? 'C' : 'PRACTICE';
+    const grade = failed ? 'FAILED' : combined >= 900 ? 'S' : combined >= 750 ? 'A' : combined >= 550 ? 'B' : combined >= 350 ? 'C' : 'PRACTICE';
     const prevCombined = G.combinedBests[key] || 0;
-    G.combinedBests[key] = Math.max(prevCombined, combined);
+    if (!failed) G.combinedBests[key] = Math.max(prevCombined, combined);
     S.set(KEY_COMBINED, G.combinedBests);
 
     G.lastResult = { stage: st, difficulty: diff, score: G.score, accuracy, stars, newBest, maxCombo: G.maxCombo, counts: Object.assign({}, G.counts),
-      ctrl, ctrlBest: G.ctrlBests[key], ctrlGrade, rhythmPts, equipmentPts, combined, grade, newCombinedBest: combined > prevCombined, cleared: stars > 0 };
+      ctrl, ctrlBest: G.ctrlBests[key] || 0, ctrlGrade, rhythmPts, equipmentPts, combined, grade, newCombinedBest: !failed && combined > prevCombined, cleared: stars > 0,
+      failed, hypeUses: G.hypeUses, holdsDone: G.holdsDone, holdsTotal: G.holdsTotal, crowd: G.crowd, progressPct: failed ? O.clamp((G.songTime() - G.leadIn) / (G.songEnd() - G.leadIn), 0, 1) : 1 };
     O.emit('game-state', G.state);
     O.emit('finish', G.lastResult);
   }
@@ -317,7 +503,7 @@
   };
 
   // ---------- controller challenge (v1 logic) ----------
-  function challengeActive() { return G.state === 'running' && E.isRunning(); }
+  function challengeActive() { return G.state === 'running' && !G.drill && E.isRunning(); }
   function challengeReset() {
     G.challenge = { stage: G.stage, step: 0, points: 0, log: [], cueReady: false, started: false, blendPhase: 0, holdStart: null, finished: false, hint: '' };
     O.emit('challenge', G.challenge);

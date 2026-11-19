@@ -86,7 +86,7 @@
           <div class="ls-perfect"><b id="ls-perfect">0</b><small>PERFECT</small></div><div class="ls-great"><b id="ls-great">0</b><small>GREAT</small></div><div><b id="ls-good">0</b><small>GOOD</small></div>
           <div class="ls-miss"><b id="ls-miss">0</b><small>MISS</small></div><div><b id="ls-off">0</b><small>OFF BEAT</small></div><div><b id="ls-max">0</b><small>MAX COMBO</small></div>
         </div>
-        <div class="keys-legend only-tall"><kbd>F</kbd> <kbd>J</kbd> <kbd>K</kbd> <kbd>L</kbd> hit lanes · <kbd>Space</kbd> start / pause · <kbd>1</kbd>–<kbd>8</kbd> sampler pads</div>
+        <div class="keys-legend only-tall"><kbd>F</kbd> <kbd>J</kbd> <kbd>K</kbd> <kbd>L</kbd> hit lanes · <kbd>Space</kbd> start / pause · <kbd>H</kbd> HYPE · <kbd>1</kbd>–<kbd>8</kbd> sampler pads</div>
       </aside>
 
       <div class="stage" id="stage">
@@ -94,6 +94,12 @@
           <canvas id="highway" aria-label="Four-lane note highway. Tap a lane or its pad when a note reaches the line."></canvas>
           <div class="judgment" id="judgment" aria-hidden="true"><b></b><small></small></div>
           <div class="stage-msg" id="stage-msg"></div>
+          <div class="callout" id="callout" aria-hidden="true"></div>
+          <button class="hype-btn" id="btn-hype" aria-label="HYPE meter"><b>HYPE</b><small>0%</small></button>
+          <div class="coach" id="coach" role="status" aria-live="polite" hidden>
+            <div class="coach-main"><b id="coach-step"></b><span id="coach-text"></span></div>
+            <div class="coach-side"><em id="coach-count"></em><button class="btn btn-small" id="coach-skip">SKIP</button></div>
+          </div>
         </div>
         <div class="lane-pads" id="lane-pads"></div>
       </div>
@@ -279,7 +285,7 @@
         <div class="group">
           <h2>App</h2>
           <p class="note">Best on iPhone: Safari → Share → <b>Add to Home Screen</b>, then play in landscape.</p>
-          <button class="btn" id="set-intro">Show welcome screen</button>
+          <button class="btn" id="set-intro">Replay tutorial</button>
           <button class="btn btn-danger" id="set-reset">Reset career progress</button>
           <p class="note" id="version-line"></p>
         </div>
@@ -291,10 +297,11 @@
   <div class="overlay" id="ov-intro" role="dialog" aria-modal="true" aria-labelledby="intro-title" hidden>
     <div class="sheet sheet-intro">
       <div class="intro-logo" id="intro-title"><span class="logo big">ORBIT</span><span class="logo-tag big">DJ</span></div>
-      <p class="intro-line">Learn to DJ by playing a game.<br>Become a DJ by mastering the game.</p>
-      <button class="btn-start" id="intro-play"><svg><use href="#i-play"/></svg><span>PLAY YOUR FIRST GROOVE</span></button>
-      <button class="link-btn" id="intro-skip">Look around first</button>
-      <p class="intro-small"><svg><use href="#i-headphones"/></svg>Sound on. Headphones help. Turn your phone sideways for the full controller.</p>
+      <p class="intro-line">Learn to DJ by playing a game.</p>
+      <ol class="intro-steps"><li>Tap notes on the beat</li><li>Hold the long ones</li><li>Fire HYPE for double points</li></ol>
+      <button class="btn-start" id="intro-play"><svg><use href="#i-play"/></svg><span>START TUTORIAL</span></button>
+      <p class="intro-small"><svg><use href="#i-headphones"/></svg>Takes about a minute. Sound on; headphones help. Turn your phone sideways for the full controller.</p>
+      <button class="link-btn" id="intro-skip">Skip the tutorial</button>
     </div>
   </div>
 
@@ -312,6 +319,20 @@
         <div class="brief-block brief-challenge"><b>YOUR CHALLENGE</b><p id="brief-challenge"></p></div>
       </div>
       <div class="sheet-actions"><button class="btn" data-close>GOT IT</button><button class="btn-start small" id="brief-start"><svg><use href="#i-play"/></svg><span>START SET</span></button></div>
+    </div>
+  </div>
+
+  <div class="overlay" id="ov-tutdone" role="dialog" aria-modal="true" aria-labelledby="tutdone-title" hidden>
+    <div class="sheet sheet-intro">
+      <div class="eyebrow">TUTORIAL COMPLETE</div>
+      <h2 class="tut-h" id="tutdone-title">YOU’RE READY</h2>
+      <ul class="tut-list">
+        <li><b>Crowd meter</b> (left of the lanes): hits fill it, misses drain it. On Club and Headliner an empty meter ends the set. Rookie never fails.</li>
+        <li><b>Multiplier</b>: every 8 hits in a row adds ×1, up to ×4. A miss resets it.</li>
+        <li><b>HYPE</b>: charge it with glowing runs, fire it for double points.</li>
+      </ul>
+      <button class="btn-start" id="tut-play"><svg><use href="#i-play"/></svg><span>PLAY YOUR FIRST SET</span></button>
+      <button class="link-btn" data-close>Look around first</button>
     </div>
   </div>
 

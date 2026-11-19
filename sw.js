@@ -1,7 +1,7 @@
 /* ORBIT DJ service worker — network-first with a versioned offline cache.
    Online you always get the newest deploy; offline you get the last version you played.
    Bump VERSION on every release so old caches are deleted. */
-const VERSION = 'orbit-v2.1.0';
+const VERSION = 'orbit-v2.2.0';
 const CORE = ['./', 'index.html', 'css/orbit.css', 'js/util.js', 'js/sounds-manifest.js', 'js/engine.js', 'js/assets.js', 'js/music.js', 'js/game.js', 'js/beatpad.js', 'js/ui.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/apple-touch-icon.png'];
 
 self.addEventListener('install', event => {

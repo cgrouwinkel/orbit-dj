@@ -5,6 +5,7 @@
   const LANE_KEYS = ['f', 'j', 'k', 'l'], PAD_KEYS = 'zxcvasdfqwer1234'; // MPC layout: bottom row = pads 1-4
   let view = 'play';
   let travel = Number(S.get('orbitV2Speed', 2.2)) || 2.2;
+  const tut = { on: false, i: 0 };
 
   // ---------- small helpers ----------
   const fmtScore = n => String(n).padStart(6, '0');
@@ -37,6 +38,10 @@
     const a = G.accuracy();
     $('#hud-acc').textContent = a === null ? '—' : Math.round(a * 100) + '%';
     const st = G.liveStars();
+    const mNow = G.multiplier();
+    if (mNow > lastMult && G.state === 'running') callout('×' + mNow + ' MULTIPLIER', 'mult');
+    lastMult = mNow;
+    renderHype(); if (tut.on) coachProgress();
     const c = G.counts; $('#ls-perfect').textContent = c.perfect; $('#ls-great').textContent = c.great; $('#ls-good').textContent = c.good; $('#ls-miss').textContent = c.miss; $('#ls-off').textContent = c.off; $('#ls-max').textContent = G.maxCombo;
     $('#hud-stars').innerHTML = starsHTML(st);
     $('#hud-stars').setAttribute('aria-label', st + ' of 3 stars');
@@ -48,12 +53,12 @@
   }
 
   // ---------- highway renderer ----------
-  const hw = { cv: $('#highway'), ctx: null, w: 0, h: 0, dpr: 1, pal: null, flash: [0, 0, 0, 0], sparks: [] };
+  const hw = { cv: $('#highway'), ctx: null, w: 0, h: 0, dpr: 1, pal: null, flash: [0, 0, 0, 0], sparks: [], flames: [], inset: 0 };
   hw.ctx = hw.cv.getContext('2d');
   function readPalette() {
     const cs = getComputedStyle(document.documentElement), v = n => cs.getPropertyValue(n).trim();
     hw.pal = { lanes: [v('--lane0'), v('--lane1'), v('--lane2'), v('--lane3')], bg: v('--hw-bg'), lane: v('--hw-lane'), laneAlt: v('--hw-lane-alt'), sep: v('--hw-sep'), beat: v('--hw-beat'), bar: v('--hw-bar'), hit: v('--hw-hit'), glow: v('--hw-glow'),
-      good: v('--good'), great: v('--great'), ok: v('--ok'), bad: v('--bad'), aero: document.documentElement.classList.contains('theme-aero') };
+      good: v('--good'), great: v('--great'), ok: v('--ok'), bad: v('--bad'), hype: v('--hype') || '#ffd84a', aero: document.documentElement.classList.contains('theme-aero') };
   }
   function sizeCanvas(cv) {
     const r = cv.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
@@ -81,6 +86,10 @@
     const pBottom = -((H - hitY) / (hitY - vy)) * (1 / k) - 0.02; // p where y reaches the canvas bottom
     const running = G.state === 'running' || G.state === 'paused' || G.state === 'finished';
     const now = running ? G.songTime() : 0, nowMs = performance.now();
+    const hyped = running && G.hypeActive, beatLen = 60 / G.bpm();
+    const pulse = hyped && !reduce ? 1 - (((now - G.leadIn) / beatLen % 1) + 1) % 1 : 0.4; // 1 on the beat, fading
+    const midX = (lane, p) => (xAt(lane, p) + xAt(lane + 1, p)) / 2;
+    const ell = (x, y, rx, ry) => { c.beginPath(); c.ellipse(x, y, Math.max(0.5, rx), Math.max(0.5, ry), 0, 0, Math.PI * 2); };
 
     // lanes
     for (let i = 0; i < 4; i++) {
@@ -90,6 +99,7 @@
       const f = Math.max(0, 1 - (nowMs - hw.flash[i]) / 220);
       g.addColorStop(0, hexA(P.lanes[i], 0.10 + f * 0.45)); g.addColorStop(1, hexA(P.lanes[i], 0));
       c.fillStyle = g; c.fill();
+      if (hyped) { c.fillStyle = hexA(P.hype, 0.07 + 0.06 * pulse); c.fill(); }
     }
     // separators
     c.lineWidth = 1; c.strokeStyle = P.sep;
@@ -117,48 +127,94 @@
     // hit line + lane targets
     c.save();
     if (!reduce) { c.shadowColor = P.glow; c.shadowBlur = 14; }
-    c.strokeStyle = P.hit; c.lineWidth = 3;
+    if (hyped) { c.shadowColor = P.hype; c.shadowBlur = reduce ? 0 : 18; }
+    c.strokeStyle = hyped ? P.hype : P.hit; c.lineWidth = 3;
     c.beginPath(); c.moveTo(xAt(0, 0), hitY); c.lineTo(xAt(4, 0), hitY); c.stroke();
+    if (hyped) { c.lineWidth = 2; for (const e of [0, 4]) { c.beginPath(); c.moveTo(xAt(e, 1), topY); c.lineTo(xAt(e, pBottom), H); c.stroke(); } }
     c.restore();
+    // lane targets: rings the gems land in
     for (let i = 0; i < 4; i++) {
-      const x0 = xAt(i, 0), x1 = xAt(i + 1, 0), w = (x1 - x0) * 0.78, x = (x0 + x1) / 2 - w / 2;
+      const x0 = xAt(i, 0), x1 = xAt(i + 1, 0), rx = (x1 - x0) * 0.36, ry = Math.min(12, Math.max(5, rx * 0.4));
       const f = Math.max(0, 1 - (nowMs - hw.flash[i]) / 160);
-      rr(c, x, hitY - 8, w, 16, P.aero ? 8 : 3);
-      c.fillStyle = hexA(P.lanes[i], 0.12 + f * 0.7); c.fill();
-      c.lineWidth = 2; c.strokeStyle = P.lanes[i]; c.stroke();
+      ell((x0 + x1) / 2, hitY, rx, ry);
+      c.fillStyle = hexA(P.lanes[i], 0.14 + f * 0.75); c.fill();
+      c.lineWidth = 2.5; c.strokeStyle = P.lanes[i]; c.stroke();
+      ell((x0 + x1) / 2, hitY, rx * 0.5, ry * 0.5);
+      c.lineWidth = 1.5; c.strokeStyle = hexA(P.lanes[i], 0.55); c.stroke();
     }
-    // notes
+    // notes: sustain tails and round gems, drawn far-to-near so closer ones overlap
     if (running) {
+      const vis = [];
       for (const n of G.notes) {
-        const until = n.t - now;
-        if (until > travel) break;
-        if (n.hit) continue;
-        if (until < -0.3) continue;
-        const p = until / travel; if (p < pBottom) continue;
-        const s = sAt(p), y = yAt(p), x0 = xAt(n.lane, p), x1 = xAt(n.lane + 1, p);
-        const w = (x1 - x0) * 0.8, h = Math.max(7, 20 * s), x = (x0 + x1) / 2 - w / 2;
-        const col = P.lanes[n.lane];
-        c.globalAlpha = n.done ? 0.28 : 1;
-        if (P.aero) {
-          rr(c, x, y - h / 2, w, h, h / 2);
-          const g = c.createLinearGradient(0, y - h / 2, 0, y + h / 2);
-          g.addColorStop(0, '#ffffff'); g.addColorStop(0.35, col); g.addColorStop(1, hexA(col, 0.65));
-          c.fillStyle = g; c.fill(); c.lineWidth = 1.5; c.strokeStyle = 'rgba(255,255,255,.85)'; c.stroke();
-        } else {
-          rr(c, x, y - h / 2, w, h, 3);
-          c.fillStyle = col; c.fill(); c.lineWidth = 2; c.strokeStyle = '#000'; c.stroke();
-          c.fillStyle = 'rgba(255,255,255,.35)'; c.fillRect(x + 3, y - h / 2 + 2, w - 6, Math.max(2, h * 0.18));
+        if (n.t - now > travel) break;
+        if (now - (n.t + (n.dur || 0)) > 0.3) continue;
+        if (n.dur ? n.holdDone : n.hit) continue;
+        vis.push(n);
+      }
+      for (let q = vis.length - 1; q >= 0; q--) {
+        const n = vis[q], col = P.lanes[n.lane], missed = n.done && !n.hit;
+        const held = !!(G.holding[n.lane] && G.holding[n.lane].n === n);
+        const glow = n.hype !== undefined && G.phrases[n.hype] && !G.phrases[n.hype].dead && !n.done;
+        let p = (n.t - now) / travel;
+        if (n.dur) {
+          const pT = Math.min(1, (n.t + n.dur - now) / travel), p0 = Math.max(pBottom, held ? 0 : p);
+          if (pT > p0) {
+            const hw0 = (xAt(n.lane + 1, p0) - xAt(n.lane, p0)) * 0.13, hw1 = (xAt(n.lane + 1, pT) - xAt(n.lane, pT)) * 0.13;
+            c.beginPath(); c.moveTo(midX(n.lane, p0) - hw0, yAt(p0)); c.lineTo(midX(n.lane, pT) - hw1, yAt(pT)); c.lineTo(midX(n.lane, pT) + hw1, yAt(pT)); c.lineTo(midX(n.lane, p0) + hw0, yAt(p0)); c.closePath();
+            c.save();
+            if (held && !reduce) { c.shadowColor = col; c.shadowBlur = 16; }
+            c.fillStyle = missed || n.dropped ? 'rgba(150,150,160,.28)' : hexA(col, held ? 0.95 : 0.6); c.fill();
+            c.restore();
+            c.lineWidth = 1; c.strokeStyle = missed || n.dropped ? 'rgba(255,255,255,.12)' : P.aero ? 'rgba(255,255,255,.7)' : 'rgba(0,0,0,.7)'; c.stroke();
+            if (held) { c.strokeStyle = 'rgba(255,255,255,.9)'; c.lineWidth = 2; c.beginPath(); c.moveTo(midX(n.lane, p0), yAt(p0)); c.lineTo(midX(n.lane, pT), yAt(pT)); c.stroke(); }
+          }
+          if (held) p = 0; else if (n.hit) continue;
         }
-        if (s > 0.5 && !n.done) {
-          c.fillStyle = P.aero ? '#023' : '#0b0a0e';
-          c.font = '900 ' + Math.round(9 + 6 * s) + 'px ' + 'system-ui, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
-          c.fillText(G.LANES[n.lane].name[0], x + w / 2, y + 1);
+        if (p < pBottom || p > 1) continue;
+        const s = sAt(p), y = yAt(p), xc = midX(n.lane, p), rx = (xAt(n.lane + 1, p) - xAt(n.lane, p)) * 0.37, ry = Math.max(3.5, rx * 0.46);
+        c.globalAlpha = missed ? 0.28 : 1;
+        if (n.finale) { // the last hit of the song spans the whole highway
+          c.save(); if (!reduce) { c.shadowColor = P.hype; c.shadowBlur = 14; }
+          c.strokeStyle = P.hype; c.lineWidth = Math.max(2, 6 * s); c.beginPath(); c.moveTo(xAt(0, p), y); c.lineTo(xAt(4, p), y); c.stroke(); c.restore();
+        }
+        ell(xc, y + ry * 0.3, rx, ry); c.fillStyle = P.aero ? 'rgba(0,18,48,.7)' : 'rgba(0,0,0,.75)'; c.fill(); // rim / drop shadow
+        c.save();
+        if (glow && !reduce) { c.shadowColor = P.hype; c.shadowBlur = 10 + 8 * s; }
+        const g = c.createLinearGradient(0, y - ry, 0, y + ry);
+        g.addColorStop(0, glow ? '#ffffff' : hexA('#ffffff', 0.55)); g.addColorStop(0.3, col); g.addColorStop(1, hexA(col, P.aero ? 0.7 : 0.82));
+        ell(xc, y, rx, ry); c.fillStyle = col; c.fill(); c.fillStyle = g; c.fill();
+        c.restore();
+        c.lineWidth = glow ? 2.5 : 1.5; c.strokeStyle = glow ? P.hype : P.aero ? 'rgba(255,255,255,.9)' : '#000'; c.stroke();
+        ell(xc, y - ry * 0.1, rx * 0.52, ry * 0.52); c.fillStyle = glow ? P.hype : P.aero ? 'rgba(255,255,255,.92)' : '#f4efe6'; c.fill();
+        c.lineWidth = 1; c.strokeStyle = 'rgba(0,0,0,.45)'; c.stroke();
+        if (s > 0.55 && !missed && ry > 7) {
+          c.fillStyle = '#0b0a0e'; c.font = '900 ' + Math.round(ry * 0.78) + 'px system-ui, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
+          c.fillText(n.finale ? '★' : G.LANES[n.lane].name[0], xc, y - ry * 0.08);
         }
         c.globalAlpha = 1;
       }
     }
-    // hit sparks
+    // hit flames + rings
     if (!reduce) {
+      const laneW = xAt(1, 0) - xAt(0, 0);
+      c.save(); c.globalCompositeOperation = 'lighter';
+      const tongue = (xc, w, h, col, a) => {
+        const g = c.createLinearGradient(0, hitY, 0, hitY - h);
+        g.addColorStop(0, hexA('#ffffff', a)); g.addColorStop(0.3, hexA(col, a * 0.9)); g.addColorStop(1, hexA(col, 0));
+        c.fillStyle = g; c.beginPath(); c.moveTo(xc - w, hitY); c.quadraticCurveTo(xc - w, hitY - h * 0.5, xc, hitY - h); c.quadraticCurveTo(xc + w, hitY - h * 0.5, xc + w, hitY); c.closePath(); c.fill();
+      };
+      hw.flames = hw.flames.filter(f => nowMs - f.t < 360);
+      for (const f of hw.flames) {
+        const a = 1 - (nowMs - f.t) / 360, xc = midX(f.lane, 0), h = H * (f.big ? 0.24 : 0.17) * (0.55 + 0.45 * a);
+        tongue(xc, laneW * 0.2, h, f.col, a);
+        tongue(xc - laneW * 0.2, laneW * 0.12, h * 0.6, f.col, a * 0.8);
+        tongue(xc + laneW * 0.2, laneW * 0.12, h * 0.66, f.col, a * 0.8);
+      }
+      for (const lane of Object.keys(G.holding)) { // a held note keeps burning
+        const fl = 0.7 + 0.3 * Math.sin(nowMs / 37 + lane);
+        tongue(midX(Number(lane), 0), laneW * 0.19, H * 0.2 * fl, P.lanes[lane], 0.85);
+      }
+      c.restore();
       hw.sparks = hw.sparks.filter(sp => nowMs - sp.t < 320);
       for (const sp of hw.sparks) {
         const a = 1 - (nowMs - sp.t) / 320, x0 = xAt(sp.lane, 0), x1 = xAt(sp.lane + 1, 0), r = (x1 - x0) * (0.35 + (1 - a) * 0.5);
@@ -166,6 +222,30 @@
         c.beginPath(); c.ellipse((x0 + x1) / 2, hitY, r, r * 0.42, 0, 0, Math.PI * 2); c.stroke();
       }
     }
+    if (running) drawGauges(c, W, P, nowMs, reduce);
+  }
+  // Multiplier dial and crowd meter, drawn in the empty corner left of the lanes.
+  function drawGauges(c, W, P, nowMs, reduce) {
+    const R = O.clamp(W * 0.062, 16, 28), x = R + 8, y = hw.inset + R + 8, m = G.multiplier(), hyped = G.hypeActive;
+    const col = hyped ? P.hype : [P.lanes[2], P.lanes[0], P.lanes[3], P.lanes[1]][m - 1], lit = m >= 4 ? 8 : G.combo % 8;
+    c.beginPath(); c.arc(x, y, R, 0, Math.PI * 2); c.fillStyle = 'rgba(0,0,0,.6)'; c.fill();
+    c.lineWidth = 4; c.lineCap = 'butt';
+    for (let i = 0; i < 8; i++) {
+      const a0 = -Math.PI / 2 + i * Math.PI / 4 + 0.07;
+      c.strokeStyle = i < lit ? col : 'rgba(255,255,255,.16)';
+      c.beginPath(); c.arc(x, y, R - 3, a0, a0 + Math.PI / 4 - 0.14); c.stroke();
+    }
+    c.fillStyle = col; c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = '900 ' + Math.round(R * 0.8) + 'px system-ui, sans-serif';
+    c.fillText('×' + m * (hyped ? 2 : 1), x, y + 1);
+    if (G.drill) return;
+    // crowd meter: red / amber / green zones with a needle
+    const bw = 9, bh = R * 2.3, bx = x - bw / 2, by = y + R + 8, v = G.crowd;
+    const zone = v < 0.34 ? P.bad : v < 0.67 ? '#ffd84a' : P.good, danger = G.canFail() && v < 0.2;
+    c.fillStyle = 'rgba(0,0,0,.6)'; rr(c, bx - 2, by - 2, bw + 4, bh + 4, 4); c.fill();
+    [[0, P.bad], [1, '#ffd84a'], [2, P.good]].forEach(([i, zc]) => { c.fillStyle = hexA(zc, 0.22); c.fillRect(bx, by + bh - (i + 1) * bh / 3, bw, bh / 3 - 1); });
+    c.fillStyle = danger && !reduce && Math.floor(nowMs / 180) % 2 ? '#ffffff' : zone; c.fillRect(bx, by + bh * (1 - v), bw, bh * v);
+    c.fillStyle = '#fff'; c.fillRect(bx - 3, by + bh * (1 - v) - 1, bw + 6, 2);
+    c.fillStyle = danger ? P.bad : 'rgba(255,255,255,.7)'; c.font = '800 7px system-ui, sans-serif'; c.fillText('CROWD', x, by + bh + 9);
   }
   function hexA(col, a) {
     col = (col || '#ffffff').trim();
@@ -213,19 +293,19 @@
   function updateStageMsg() {
     const v = G.VENUES[G.stage], first = !S.get('orbitV2FirstSetDone', false);
     if (G.state === 'idle') {
-      setStage('idle' + G.stage, '<div class="title">' + v.name + '</div><div class="sub">' + (first ? 'Tap START SET. When a note hits the line, tap its lane or pad.' : v.tag + ' Tap START SET.') + '</div>');
+      setStage('idle' + G.stage + tut.on, tut.on ? '' : '<div class="title">' + v.name + '</div><div class="sub">' + (first ? 'Tap START SET. When a note hits the line, tap its lane or pad.' : v.tag + ' Tap START SET.') + '</div>');
     } else if (G.state === 'running') {
       const now = G.songTime(), beat = 60 / G.bpm();
       if (now < G.leadIn) {
         const n = Math.ceil((G.leadIn - now) / beat - 0.02);
-        if (n <= 4 && n >= 1) setStage('cd' + n, '<div class="big">' + n + '</div><div class="sub">' + (first ? 'Notes are coming. Tap when they touch the line.' : 'Count it in…') + '</div>');
+        if (n <= 4 && n >= 1) setStage('cd' + n + !!G.drill, '<div class="big">' + n + '</div>' + (G.drill ? '' : '<div class="sub">' + (first ? 'Notes are coming. Tap when they touch the line.' : 'Count it in…') + '</div>'));
         else setStage('pre', '<div class="title">GET READY</div>');
       } else if (now < G.leadIn + beat) setStage('go', '<div class="big">GO!</div>');
       else setStage('', '');
     } else if (G.state === 'paused') {
       const why = { background: 'Paused when you left the app.', audio: 'Sound was interrupted by your phone.', user: 'Press RESUME when you’re ready.' }[G.pauseReason] || 'Press RESUME when you’re ready.';
       setStage('paused' + G.pauseReason, '<div class="title">PAUSED</div><div class="sub">' + why + '</div>');
-    } else if (G.state === 'finished') setStage('done', '<div class="title">SET COMPLETE</div>');
+    } else if (G.state === 'finished') setStage('done' + G.failed, '<div class="title">' + (G.failed ? 'THE CROWD WALKED OUT' : 'SET COMPLETE') + '</div>');
   }
 
   // ---------- judgement popup ----------
@@ -239,6 +319,7 @@
       const ms = Math.round(j.err * 1000);
       small = Math.abs(ms) <= 20 ? 'ON THE BEAT' : Math.abs(ms) + ' MS ' + (ms < 0 ? 'EARLY' : 'LATE');
       hw.sparks.push({ lane: j.lane, t: performance.now(), col: j.kind === 'perfect' ? hw.pal.good : j.kind === 'great' ? hw.pal.great : hw.pal.ok });
+      hw.flames.push({ lane: j.lane, t: performance.now(), col: j.hype ? hw.pal.hype : hw.pal.lanes[j.lane], big: j.kind === 'perfect' });
     }
     judgeEl.querySelector('small').textContent = small;
     try { judgeEl.getAnimations().forEach(a => a.cancel()); } catch (e) {}
@@ -270,9 +351,41 @@
     const r = hw.cv.getBoundingClientRect(), i = O.clamp(Math.floor((e.clientX - r.left) / r.width * 4), 0, 3);
     activePointers.set(e.pointerId, i); laneHit(i, e);
   });
-  const release = e => { if (activePointers.has(e.pointerId)) { padUp(activePointers.get(e.pointerId)); activePointers.delete(e.pointerId); } };
+  const release = e => { if (activePointers.has(e.pointerId)) { const i = activePointers.get(e.pointerId); padUp(i); G.release(i); activePointers.delete(e.pointerId); } };
   ['pointerup', 'pointercancel', 'pointerleave'].forEach(t => { lanePads.addEventListener(t, release); hw.cv.addEventListener(t, release); });
   lanePads.addEventListener('contextmenu', e => e.preventDefault());
+
+  // ---------- callouts (streaks, multiplier, HYPE) ----------
+  const calloutEl = $('#callout');
+  function callout(text, cls) {
+    calloutEl.textContent = text; calloutEl.className = 'callout ' + (cls || '');
+    try { calloutEl.getAnimations().forEach(a => a.cancel()); } catch (e) {}
+    if (calloutEl.animate) calloutEl.animate(O.reducedMotion() ? [{ opacity: 1 }, { opacity: 1, offset: 0.75 }, { opacity: 0 }] : [{ transform: 'translateY(10px) scale(.8)', opacity: 0 }, { transform: 'none', opacity: 1, offset: 0.15 }, { opacity: 1, offset: 0.75 }, { transform: 'translateY(-8px)', opacity: 0 }], { duration: 1300, fill: 'forwards', easing: 'ease-out' });
+    wake(1400);
+  }
+  let lastMult = 1;
+  O.on('streak', n => callout(n + ' NOTE STREAK!', 'streak'));
+  O.on('finale', () => { if (G.crowd >= 0.34) callout('BIG FINISH!', 'hype'); });
+  O.on('hold', h => { if (h.complete) hw.flames.push({ lane: h.lane, t: performance.now(), col: hw.pal.lanes[h.lane], big: true }); if (tut.on) coachProgress(); wake(); });
+
+  // ---------- HYPE button (doubles as the HYPE meter) ----------
+  const hypeBtn = $('#btn-hype');
+  let hypeKey = '';
+  function renderHype() {
+    const pctFill = Math.round(G.hype * 100), ready = G.hypeReady(), key = pctFill + '|' + ready + '|' + G.hypeActive;
+    if (key === hypeKey) return; hypeKey = key;
+    hypeBtn.style.setProperty('--fill', pctFill + '%');
+    hypeBtn.classList.toggle('is-ready', ready); hypeBtn.classList.toggle('is-active', G.hypeActive);
+    hypeBtn.setAttribute('aria-label', G.hypeActive ? 'HYPE active, double points' : ready ? 'Fire HYPE for double points (key H)' : 'HYPE meter ' + pctFill + ' percent. Hit glowing notes to charge it.');
+    hypeBtn.querySelector('small').textContent = G.hypeActive ? '×2' : ready ? 'TAP!' : pctFill + '%';
+    document.documentElement.classList.toggle('is-hype', G.hypeActive);
+  }
+  hypeBtn.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); if (!G.activateHype() && G.state === 'running' && !G.hypeActive) O.toast('Hit a full run of glowing notes to charge HYPE.'); });
+  O.on('hype', h => {
+    if (h.type === 'on') callout('HYPE! DOUBLE POINTS', 'hype');
+    else if (h.type === 'phrase') callout(h.ready ? 'HYPE READY!' : 'HYPE +25%', 'hype');
+    renderHype(); if (tut.on) coachProgress(); wake();
+  });
 
   // ---------- transport ----------
   const btnStart = $('#btn-start');
@@ -652,14 +765,76 @@
     ov.addEventListener('click', e => { if (e.target.closest('[data-close]')) closeOverlay(ov.id); else if (e.target === ov && ov.id !== 'ov-audio' && ov.id !== 'ov-intro') closeOverlay(ov.id); });
   });
 
-  // intro
-  $('#intro-play').addEventListener('click', () => {
+  // ---------- first-run tutorial: five short hands-on drills ----------
+  const TUT = [
+    { id: 'kick', title: 'KICK', text: 'Notes slide down the lanes. When one lands on the ring, tap the KICK pad (or tap the lane itself).', goal: 'kicks' },
+    { id: 'snare', title: 'SNARE', text: 'Same move, next lane. Snares land on beats 2 and 4. Listen for the tick and tap with it.', goal: 'snares' },
+    { id: 'beat', title: 'FULL BEAT', text: 'Now both hands: kick, snare, then hi-hats. Every 8 hits in a row raises your multiplier, up to ×4.', goal: 'notes' },
+    { id: 'hold', title: 'HOLD NOTES', text: 'A note with a tail is a hold. Tap it and keep your finger down until the tail runs out.', goal: 'hold finished' },
+    { id: 'hype', title: 'HYPE', text: 'Glowing notes charge HYPE. Hit a whole glowing run, then tap the round HYPE button for double points.', goal: 'HYPE fired' }
+  ];
+  const coach = $('#coach');
+  function coachShow(on) {
+    coach.hidden = !on;
+    document.documentElement.classList.toggle('is-tutorial', on);
+    hw.inset = on ? coach.offsetHeight + 2 : 0;
+    hypeBtn.style.top = on ? hw.inset + 6 + 'px' : '';
+  }
+  function coachRender(note) {
+    const st = TUT[tut.i];
+    $('#coach-step').textContent = (tut.i + 1) + ' / ' + TUT.length + ' · ' + st.title;
+    $('#coach-text').textContent = note || st.text;
+    coach.classList.toggle('is-pass', !!note && note.startsWith('NICE'));
+    coachProgress();
+    coachShow(true);
+  }
+  function coachProgress() {
+    const d = G.drill, st = TUT[tut.i]; if (!st) return;
+    const txt = d ? Math.min(d.count(G), d.goal) + ' / ' + d.goal + ' ' + st.goal : '';
+    if ($('#coach-count').textContent !== txt) $('#coach-count').textContent = txt;
+    if (d && d.id === 'hype' && G.hypeReady() && !coach.dataset.hint) { coach.dataset.hint = '1'; $('#coach-text').textContent = 'HYPE is charged. Tap the round HYPE button now!'; }
+  }
+  async function tutStep() {
+    delete coach.dataset.hint;
+    coachRender('');
+    await G.startDrill(TUT[tut.i].id);
+    if (tut.on) { hw.inset = coach.offsetHeight + 2; coachProgress(); wake(); }
+  }
+  function tutStart() {
     S.set('orbitV2Intro', true);
     closeOverlay('ov-intro');
-    G.select(0); G.setDifficulty('easy'); showView('play');
+    if (view !== 'play') showView('play');
+    tut.on = true; tut.i = 0;
+    stageKey = '';
+    tutStep();
+  }
+  function tutEnd(done) {
+    const was = tut.on; tut.on = false;
+    coachShow(false);
+    if (G.drill) G.endDrill();
+    if (done) S.set('orbitV22Tutorial', true);
+    stageKey = ''; updateStageMsg(); wake();
+    return was;
+  }
+  O.on('drill', d => {
+    if (!tut.on) return;
+    if (d.status === 'pass') coachRender('NICE! ' + (tut.i < TUT.length - 1 ? 'Next up: ' + TUT[tut.i + 1].title + '.' : 'That’s everything.'));
+    else if (d.status === 'retry') coachRender(d.id === 'hold' ? 'Again: tap the note, then keep holding until its tail is gone.' : d.id === 'hype' ? 'Again: hit every glowing note in a run, then tap HYPE.' : 'One more time. Tap right as the note lands on the ring.');
+    else if (d.status === 'done') {
+      tut.i++;
+      if (tut.i < TUT.length) tutStep();
+      else { tutEnd(true); openOverlay('ov-tutdone'); }
+    } else if (d.status === 'abort') { tutEnd(false); O.toast('Tutorial stopped. Replay it from Setup.'); }
+  });
+  $('#coach-skip').addEventListener('click', () => { tutEnd(true); O.toast('Tutorial skipped. Replay it any time from Setup.'); });
+  $('#intro-play').addEventListener('click', tutStart);
+  $('#intro-skip').addEventListener('click', () => { S.set('orbitV2Intro', true); S.set('orbitV22Tutorial', true); closeOverlay('ov-intro'); });
+  $('#tut-play').addEventListener('click', () => {
+    closeOverlay('ov-tutdone');
+    if (G.stage !== 0) G.select(0);
+    G.setDifficulty('easy');
     G.start();
   });
-  $('#intro-skip').addEventListener('click', () => { S.set('orbitV2Intro', true); closeOverlay('ov-intro'); });
 
   // equipment briefing
   let briefStage = 0, briefIdx = 0;
@@ -694,7 +869,7 @@
       $('#res-venue').textContent = v.name + ' · ' + G.DIFFS[r.difficulty].label;
       const gEl = $('#res-grade'); gEl.textContent = r.grade; gEl.classList.toggle('long', r.grade.length > 1);
       $('#res-stars').innerHTML = starsHTML(r.stars);
-      $('#res-title').textContent = r.cleared ? 'VENUE CLEARED!' : 'KEEP PRACTISING';
+      $('#res-title').textContent = r.failed ? 'CROWD WALKED OUT AT ' + Math.round(r.progressPct * 100) + '%' : r.cleared ? 'VENUE CLEARED!' : 'KEEP PRACTISING';
       $('#res-score').textContent = r.score.toLocaleString();
       $('#res-pb').hidden = !r.newBest;
       $('#res-rhythm').textContent = r.rhythmPts + ' / 700 · ' + Math.round(r.accuracy * 100) + '%';
@@ -702,9 +877,9 @@
       $('#res-equip').textContent = r.equipmentPts + ' / 300 · ' + r.ctrlGrade;
       $('#res-equip-bar').style.width = (r.equipmentPts / 3) + '%';
       const c = r.counts;
-      $('#res-counts').innerHTML = '<span>PERFECT <b>' + c.perfect + '</b></span><span>GREAT <b>' + c.great + '</b></span><span>GOOD <b>' + c.good + '</b></span><span>MISS <b>' + c.miss + '</b></span><span>MAX COMBO <b>' + r.maxCombo + '</b></span><span>TOTAL <b>' + r.combined + '/1000</b></span>';
+      $('#res-counts').innerHTML = '<span>PERFECT <b>' + c.perfect + '</b></span><span>GREAT <b>' + c.great + '</b></span><span>GOOD <b>' + c.good + '</b></span><span>MISS <b>' + c.miss + '</b></span><span>BEST STREAK <b>' + r.maxCombo + '</b></span><span>HOLDS <b>' + r.holdsDone + '/' + r.holdsTotal + '</b></span><span>HYPE <b>×' + r.hypeUses + '</b></span><span>TOTAL <b>' + r.combined + '/1000</b></span>';
       const next = $('#res-next');
-      next.querySelector('span').textContent = r.stage < 3 ? 'NEXT VENUE' : 'PLAY AGAIN';
+      next.querySelector('span').textContent = r.failed ? 'TRY AGAIN' : r.stage < 3 ? 'NEXT VENUE' : 'PLAY AGAIN';
       openOverlay('ov-results');
     }, 450);
   });
@@ -712,6 +887,7 @@
   $('#res-career').addEventListener('click', () => { closeOverlay('ov-results'); G.state = 'idle'; O.emit('game-state', 'idle'); showView('career'); });
   $('#res-next').addEventListener('click', () => {
     closeOverlay('ov-results');
+    if (G.lastResult && G.lastResult.failed) { G.start(); return; }
     if (G.stage < 3) { const n = G.stage + 1; G.select(n); const briefed = S.get('orbitV2Briefed', {}); if (!briefed[n]) { openBrief(n); return; } }
     G.start();
   });
@@ -730,6 +906,7 @@
     closeOverlay('ov-audio');
     if (G.state === 'paused' && (audioReason === 'interrupted' || audioReason === 'resume')) G.resume();
     else if (audioReason === 'start') G.start();
+    else if (audioReason === 'drill' && tut.on) tutStep();
   });
 
   // tap-test calibration
@@ -776,6 +953,7 @@
       const lane = LANE_KEYS.indexOf(k);
       if (lane >= 0) { e.preventDefault(); keyLane.set(k, lane); laneHit(lane, e); return; }
       if (e.code === 'Space') { e.preventDefault(); primaryAction(); return; }
+      if (k === 'h' || k === 'enter') { e.preventDefault(); G.activateHype(); return; }
       if (/^[1-8]$/.test(k)) { e.preventDefault(); BP.padDown(Number(k) - 1, O.eventTime(e), 1); }
     } else if (view === 'pads') {
       const i = PAD_KEYS.indexOf(k);
@@ -783,7 +961,7 @@
       if (e.code === 'Space') { e.preventDefault(); BP.togglePlay(); }
     }
   });
-  document.addEventListener('keyup', e => { const k = e.key.toLowerCase(); if (keyLane.has(k)) { padUp(keyLane.get(k)); keyLane.delete(k); } const i = PAD_KEYS.indexOf(k); if (i >= 0 && view === 'pads') { padEls[i].classList.remove('is-down'); BP.padUp(undefined, i); } });
+  document.addEventListener('keyup', e => { const k = e.key.toLowerCase(); if (keyLane.has(k)) { padUp(keyLane.get(k)); G.release(keyLane.get(k)); keyLane.delete(k); } const i = PAD_KEYS.indexOf(k); if (i >= 0 && view === 'pads') { padEls[i].classList.remove('is-down'); BP.padUp(undefined, i); } });
 
   // ---------- render loop (runs only while something is moving) ----------
   let raf = 0, wakeUntil = 0;
@@ -793,7 +971,7 @@
     E.tick();
     G.update();
     if (view === 'play') {
-      drawHighway(); updateStageMsg(); drawSpectrum();
+      drawHighway(); updateStageMsg(); drawSpectrum(); if (G.state === 'running') renderHype();
       $('#progress').style.width = (G.state === 'running' || G.state === 'paused' ? O.clamp(G.songTime() / G.DURATION * 100, 0, 100) : G.state === 'finished' ? 100 : 0) + '%';
     } else if (view === 'pads') { drawLCD(false); }
     const busy = G.state === 'running' || M.playing || BP.playing;
@@ -840,6 +1018,6 @@
   renderNowPlaying(); renderHUD(); renderTransport(); renderDifficulty(); renderStyle(); renderLevels(); renderMixer(); syncFaders(); renderBP();
   $('#ctrl-feedback').textContent = G.feedback || '';
   resizeCanvases(); updateStageMsg();
-  if (!S.get('orbitV2Intro', false)) openOverlay('ov-intro');
-  O.ui = { showView, openBrief, openOverlay, closeOverlay, setTheme, setMotion, wake, get view() { return view; }, calibClicks: () => (calib ? calib.clicks.slice() : null) };
+  if (!S.get('orbitV22Tutorial', false)) openOverlay('ov-intro'); // new players land straight in the tutorial
+  O.ui = { tutorial: tut, tutStart, tutEnd, showView, openBrief, openOverlay, closeOverlay, setTheme, setMotion, wake, get view() { return view; }, calibClicks: () => (calib ? calib.clicks.slice() : null) };
 })();

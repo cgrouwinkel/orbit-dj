@@ -251,6 +251,8 @@
  "fx": [
   "vinyl",
   "riser",
-  "impact"
+  "impact",
+  "miss",
+  "crowd"
  ]
 }

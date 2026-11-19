@@ -210,12 +210,45 @@
     return notes;
   };
 
+  // v2.2 set chart: the song's drum parts plus hold notes, HYPE phrases and a finale hit.
+  // bars is the song length; every note carries { t, lane, pad } and optionally { dur, hype, finale }.
+  M.chartSet = function (id, bpm, leadIn, bars, diff, stage) {
+    const S = STYLES[resolve(id)], unit = 60 / bpm / 4, beat = 60 / bpm, lvl = { easy: 0, normal: 1, expert: 2 }[diff] || 0;
+    const rule = { lvl, single: diff !== 'expert', stage };
+    let notes = [];
+    for (let k = 0; k < bars * 16; k++) {
+      const t = leadIn + k * unit + (k % 2 ? S.swing * unit : 0), bar = Math.floor(k / 16);
+      for (const c of chartAt(S, bar % 8, k % 16, rule)) notes.push({ t, lane: c.lane, pad: c.hit[3] !== undefined ? c.hit[3] : S.pads[c.el], done: false, bar });
+    }
+    // Hold notes on the FX lane: the back half of bar 4 of each phrase, and (above Rookie) the whole fill bar.
+    for (let bar = 0; bar < bars; bar++) {
+      const b8 = bar % 8; let h = null;
+      if (b8 === 3) h = { t: leadIn + (bar * 16 + 8) * unit, dur: 2 * beat };
+      else if (b8 === 7 && lvl > 0) h = { t: leadIn + bar * 16 * unit, dur: 4 * beat };
+      if (!h) continue;
+      const end = h.t + h.dur;
+      notes = notes.filter(n => n.lane === 3 ? !(n.t > h.t - unit * 0.6 && n.t < end + unit * 1.5) : !(lvl === 0 && n.t > h.t - unit * 0.6 && n.t < end - 0.01));
+      notes.push({ t: h.t, lane: 3, pad: S.pads.fx, dur: h.dur, done: false, bar });
+    }
+    // HYPE phrases: every note in bars 2 and 6 of each phrase glows; hit them all to charge the meter.
+    notes.forEach(n => { const b8 = n.bar % 8; if ((b8 === 1 || b8 === 5) && !n.dur) n.hype = n.bar; });
+    notes.push({ t: leadIn + bars * 16 * unit, lane: 0, pad: S.pads.kick, done: false, bar: bars, finale: true });
+    return notes.sort((a, b) => a.t - b.t || a.lane - b.lane);
+  };
+  // Briefly pull the melody and bass down (used when the player misses a note).
+  M.dip = function (depth, dur) {
+    const s = M.session; if (!s || !E.ctx) return;
+    const t = E.ctx.currentTime;
+    for (const g of [s.dipM.gain, s.dipB.gain]) { try { g.cancelScheduledValues(t); g.setTargetAtTime(depth, t, 0.012); g.setTargetAtTime(1, t + dur, 0.07); } catch (e) {} }
+  };
+
   // ---------- session (per-play gain stage so stop/pause silences everything already scheduled) ----------
   function openSession(c, nodes) {
     const s = { melody: c.createGain(), bass: c.createGain(), drums: c.createGain(), gen: E.generation, rev: nodes.revIn, bed: null };
     s.base = layerGains(M.style);
     s.melody.gain.value = s.base.melody; s.bass.gain.value = s.base.bass; s.drums.gain.value = s.base.drums;
-    s.melody.connect(nodes.melody); s.bass.connect(nodes.bass); s.drums.connect(nodes.drums);
+    s.dipM = c.createGain(); s.dipB = c.createGain();
+    s.melody.connect(s.dipM); s.dipM.connect(nodes.melody); s.bass.connect(s.dipB); s.dipB.connect(nodes.bass); s.drums.connect(nodes.drums);
     return s;
   }
   const db = x => Math.pow(10, x / 20);
@@ -225,7 +258,7 @@
     const t = E.ctx.currentTime;
     if (s.bed) { try { s.bed.src.stop(t + 0.05); } catch (e) {} }
     for (const k of ['melody', 'bass', 'drums']) { try { s[k].gain.cancelScheduledValues(t); s[k].gain.setTargetAtTime(0, t, 0.008); } catch (e) {} }
-    setTimeout(() => { for (const k of ['melody', 'bass', 'drums']) { try { s[k].disconnect(); } catch (e) {} } }, 150);
+    setTimeout(() => { for (const k of ['melody', 'bass', 'drums', 'dipM', 'dipB']) { try { s[k].disconnect(); } catch (e) {} } }, 150);
   }
   function startBed(c, s, t) {
     const S = STYLES[M.style];
@@ -254,6 +287,7 @@
         if (v > 0.02) Synth.kit(c, L.drums, S.kit, h[3] !== undefined ? h[3] : S.pads[el], t, { vel: v, pan: el === 'perc' ? ((step % 4) - 1.5) * 0.15 : el === 'hat' ? 0.12 : 0 });
       }
     }
+    if (M.click && step % 4 === 0) Synth.kit(c, L.drums, S.kit, S.pads.hat, t, { vel: step === 0 ? 0.7 : 0.45 }); // tutorial metronome
     S.play(c, L, bar, step, t, beat, helpers(c, L, beat));
     if (M.onStep) M.onStep(k, t);
   }
@@ -277,7 +311,7 @@
     }
   }
 
-  /* opts: { style, bpm, origin, mode: 'set'|'jam'|'demo'|'bare', guide (0-1), chartRule, countIn, endAt } */
+  /* opts: { style, bpm, origin, mode: 'set'|'jam'|'demo'|'bare', guide (0-1), chartRule, countIn, endAt, click } */
   M.start = function (opts) {
     M.stop();
     const c = E.ctx; if (!c || !E.nodes) return false;
@@ -287,6 +321,7 @@
     M.guideLevel = opts.guide === undefined ? 1 : opts.guide;
     M.chartRule = opts.chartRule || null;
     M.endAt = opts.endAt || Infinity;
+    M.click = !!opts.click;
     M.origin = opts.origin !== undefined ? opts.origin : c.currentTime + 0.12;
     M.session = openSession(c, E.nodes);
     M.session.duckable = true;
@@ -311,7 +346,7 @@
     if (M.session) closeSession(M.session);
     M.session = null;
     const was = M.playing;
-    M.playing = false; M.mode = null; M.chartRule = null;
+    M.playing = false; M.mode = null; M.chartRule = null; M.click = false;
     if (was) O.emit('music', { playing: false });
   };
 

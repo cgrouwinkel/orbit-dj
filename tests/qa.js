@@ -9,13 +9,14 @@ function check(name, ok, detail) { results.push({ group: current, name, ok: !!ok
 
 async function newPage(browser, opts = {}) {
   const ctx = await browser.newContext({ viewport: opts.viewport || { width: 1366, height: 860 }, hasTouch: !!opts.touch, isMobile: !!opts.touch, acceptDownloads: true });
-  await ctx.addInitScript(seed => { try { if (!sessionStorage.getItem('seeded')) { localStorage.clear(); localStorage.setItem('orbitV2Intro', 'true'); for (const k in seed) localStorage.setItem(k, seed[k]); sessionStorage.setItem('seeded', '1'); } } catch (e) {} }, opts.seed || {});
+  await ctx.addInitScript(seed => { try { if (!sessionStorage.getItem('seeded')) { localStorage.clear(); localStorage.setItem('orbitV2Intro', 'true'); if (!seed.__tutorial) localStorage.setItem('orbitV22Tutorial', 'true'); for (const k in seed) localStorage.setItem(k, seed[k]); sessionStorage.setItem('seeded', '1'); } } catch (e) {} }, opts.seed || {});
   const page = await ctx.newPage();
   page._errors = [];
   page.on('pageerror', e => page._errors.push('pageerror: ' + e.message));
   page.on('console', m => { if (m.type() === 'error') page._errors.push('console: ' + m.text()); });
   await page.goto(BASE + '/index.html');
   await page.waitForTimeout(300);
+  if (!opts.fail) await page.evaluate(() => { ORBIT.game.noFail = true; }); // crowd-fail is tested on its own page
   return { ctx, page };
 }
 const autoPlay = page => page.evaluate(() => new Promise(res => {
@@ -49,7 +50,7 @@ const autoPlay = page => page.evaluate(() => new Promise(res => {
     Object.values(S.kits).forEach(k => k.forEach(d => paths.push(d.path))); paths.push(...A.allInstPaths(), ...Object.values(S.fx));
     await A.ensure(paths); return { total: paths.length, decoded: paths.filter(p => A.get(p)).length };
   });
-  check('Every sound file loads and decodes (kits, instruments, fx, v1 chops)', lib.total === 124 && lib.decoded === lib.total, lib);
+  check('Every sound file loads and decodes (kits, instruments, fx, v1 chops)', lib.total === 126 && lib.decoded === lib.total, lib);
 
   current = 'Music + charts';
   const follow = await page.evaluate(async () => {
@@ -407,6 +408,123 @@ const autoPlay = page => page.evaluate(() => new Promise(res => {
     check(vp.n + ': no console errors', page._errors.length === 0, page._errors.slice(0, 3));
     await ctx.close();
   }
+
+  // ---------------------------------------------------------------- v2.2 band-game mechanics
+  current = 'Band mechanics';
+  ({ ctx, page } = await newPage(browser, { fail: true }));
+  await page.click('#btn-start'); await page.waitForTimeout(200); await page.evaluate(() => ORBIT.game.stop());
+  const chart = await page.evaluate(() => {
+    const G = ORBIT.game, M = ORBIT.music, out = {};
+    for (const [st, diff] of [[0, 'easy'], [2, 'normal'], [3, 'expert']]) {
+      const v = G.VENUES[st], bars = G.barsFor(v.bpm), lead = 3, n = M.chartSet(v.style, v.bpm, lead, bars, diff, st);
+      const holds = n.filter(x => x.dur), secs = bars * 240 / v.bpm;
+      const clash = holds.filter(h => n.some(x => x !== h && x.t > h.t - 0.02 && x.t < h.t + h.dur - 0.02 && (diff === 'easy' || x.lane === 3))).length;
+      const phrases = new Set(n.filter(x => x.hype !== undefined).map(x => x.hype)).size, last = n[n.length - 1];
+      out[st + diff] = { notes: n.length, secs: +secs.toFixed(1), holds: holds.length, clash, phrases, finale: !!last.finale && Math.abs(last.t - (lead + secs)) < 1e-6, sorted: n.every((x, i) => !i || x.t >= n[i - 1].t) };
+    }
+    return out;
+  });
+  const charts = Object.values(chart);
+  check('Sets run about a minute (50–70 s of music) at every venue tempo', charts.every(c => c.secs >= 50 && c.secs <= 70), Object.fromEntries(Object.entries(chart).map(([k, v]) => [k, v.secs])));
+  check('Every chart has hold notes, HYPE phrases and ends on a finale hit', charts.every(c => c.holds >= 2 && c.phrases >= 4 && c.finale && c.sorted), chart);
+  check('Hold notes never overlap another note in their own lane (and nothing at all on Rookie)', charts.every(c => c.clash === 0), Object.fromEntries(Object.entries(chart).map(([k, v]) => [k, v.clash])));
+
+  const hold = await page.evaluate(async () => {
+    const G = ORBIT.game, waitFor = f => new Promise(r => { (function w() { if (f()) r(); else requestAnimationFrame(w); })(); }), out = {};
+    G.select(0); G.setDifficulty('easy'); await G.start();
+    const hs = G.notes.filter(n => n.dur), [h1, h2] = hs;
+    const auto = setInterval(() => { const now = G.songTime(); for (const n of G.notes) { if (n.t > now + 0.01) break; if (!n.done && n.t > now - 0.1 && n !== h2) G.tap(n.lane); } }, 8);
+    await waitFor(() => G.holding[3] && G.holding[3].n === h1);
+    const s0 = G.score; out.holdingAfterTap = true;
+    await waitFor(() => G.songTime() > h1.t + h1.dur + 0.05);
+    out.completed = !!h1.holdDone && G.holdsDone === 1; out.bonus = G.score - s0;
+    await waitFor(() => G.songTime() >= h2.t - 0.004); G.tap(3);
+    await waitFor(() => G.songTime() > h2.t + h2.dur * 0.4);
+    const combo = G.combo; G.release(3);
+    out.dropped = !!h2.dropped && !h2.holdDone && !G.holding[3]; out.comboKept = G.combo === combo && combo > 0; out.holdsDone = G.holdsDone;
+    clearInterval(auto); G.stop();
+    return out;
+  });
+  check('Holding a note to the end of its tail completes it and pays a hold bonus', hold.completed && hold.bonus >= 150, hold);
+  check('Letting go early drops the hold without breaking the streak', hold.dropped && hold.comboKept && hold.holdsDone === 1, hold);
+
+  const hype = await page.evaluate(async () => {
+    const G = ORBIT.game, waitFor = f => new Promise(r => { (function w() { if (f()) r(); else requestAnimationFrame(w); })(); }), out = {};
+    G.select(0); G.setDifficulty('easy'); await G.start();
+    out.notReadyAtStart = !G.hypeReady() && G.activateHype() === false;
+    const auto = setInterval(() => { const now = G.songTime(); for (const n of G.notes) { if (n.t > now + 0.01) break; if (!n.done && n.t > now - 0.1) G.tap(n.lane); } }, 8);
+    await waitFor(() => G.hype >= 0.25); out.afterOnePhrase = G.hype; out.readyAfterOne = G.hypeReady();
+    await waitFor(() => G.hypeReady()); out.meter = G.hype;
+    clearInterval(auto);
+    const next = G.notes.find(n => !n.done && !n.dur);
+    await waitFor(() => G.songTime() >= next.t - 0.004);
+    out.fired = G.activateHype(); const before = G.score; G.tap(next.lane);
+    out.gain = G.score - before; out.expected = 150 * G.multiplier() * 2; // v1 rule: the multiplier counts the hit itself
+    out.active = G.hypeActive; out.active = G.hypeActive;
+    await waitFor(() => !G.hypeActive || G.state !== 'running');
+    out.ended = !G.hypeActive && G.hype === 0 && G.hypeUses === 1;
+    G.stop();
+    return out;
+  });
+  check('HYPE charges 25% per glowing phrase and unlocks at 50%', hype.notReadyAtStart && Math.abs(hype.afterOnePhrase - 0.25) < 1e-9 && !hype.readyAfterOne && hype.meter >= 0.5, hype);
+  check('Firing HYPE doubles points, then drains and switches off', hype.fired && hype.active && hype.gain === hype.expected && hype.ended, hype);
+
+  const crowd = await page.evaluate(async () => {
+    const G = ORBIT.game, S = ORBIT.synth, waitFor = (f, ms) => new Promise(r => { const t0 = performance.now(); (function w() { if (f() || performance.now() - t0 > ms) r(); else requestAnimationFrame(w); })(); }), out = {};
+    localStorage.removeItem('orbitArcadeProgress'); G.progress = {};
+    const orig = S.oneShot; let scratches = 0; S.oneShot = function (c, d, path) { if (/miss\.wav/.test(path)) scratches++; return orig.apply(this, arguments); };
+    G.select(0); G.setDifficulty('normal'); await G.start();
+    await waitFor(() => G.state === 'finished', 30000);
+    out.club = { failed: !!(G.lastResult && G.lastResult.failed), grade: G.lastResult && G.lastResult.grade, stars: G.lastResult && G.lastResult.stars, saved: !!G.progress[0], pct: G.lastResult && G.lastResult.progressPct, scratches };
+    await new Promise(r => setTimeout(r, 700));
+    out.club.title = document.getElementById('res-title').textContent; out.club.next = document.querySelector('#res-next span').textContent;
+    ORBIT.ui.closeOverlay('ov-results');
+    G.setDifficulty('easy'); await G.start();
+    await waitFor(() => G.misses >= 30, 60000);
+    out.rookie = { state: G.state, crowd: G.crowd, misses: G.misses };
+    G.stop(); S.oneShot = orig;
+    return out;
+  });
+  check('Club: missing everything empties the crowd meter and fails the set early, nothing saved', crowd.club.failed && crowd.club.grade === 'FAILED' && crowd.club.stars === 0 && !crowd.club.saved && crowd.club.pct < 0.5, crowd.club);
+  check('Failed-set results explain what happened and offer TRY AGAIN', /CROWD WALKED OUT/.test(crowd.club.title) && crowd.club.next === 'TRY AGAIN', crowd.club);
+  check('Misses play the scratch sound (rate-limited)', crowd.club.scratches >= 3 && crowd.club.scratches <= 12, crowd.club.scratches);
+  check('Rookie never fails: 30 misses in, the set is still running', crowd.rookie.state === 'running' && crowd.rookie.crowd > 0, crowd.rookie);
+  check('Band mechanics: no console errors', page._errors.length === 0, page._errors.slice(0, 3));
+  await ctx.close();
+
+  // ---------------------------------------------------------------- first-run tutorial
+  current = 'Tutorial';
+  ({ ctx, page } = await newPage(browser, { seed: { __tutorial: '1' }, touch: true, viewport: { width: 844, height: 390 } }));
+  check('First open: tutorial welcome is on screen immediately', await page.evaluate(() => !document.getElementById('ov-intro').hidden && /START TUTORIAL/.test(document.getElementById('intro-play').textContent)));
+  await page.tap('#intro-play');
+  await page.waitForFunction(() => ORBIT.game.drill && ORBIT.game.state === 'running', null, { timeout: 8000 });
+  const t1 = await page.evaluate(() => ({ drill: ORBIT.game.drill.id, coach: !document.getElementById('coach').hidden, step: document.getElementById('coach-step').textContent, click: ORBIT.music.click, mode: ORBIT.music.mode, lanes: [...new Set(ORBIT.game.notes.map(n => n.lane))], scroll: document.documentElement.scrollHeight > innerHeight + 1 }));
+  check('One tap starts drill 1 (kick only) over a metronome, coach visible, no page scroll', t1.drill === 'kick' && t1.coach && /1 \/ 5/.test(t1.step) && t1.click && t1.mode === 'bare' && t1.lanes.join() === '0' && !t1.scroll, t1);
+  // let the first drill run out untouched: it must loop, not fail
+  await page.waitForFunction(() => ORBIT.game.drill && ORBIT.game.drill.tries >= 1, null, { timeout: 30000 });
+  check('An unfinished drill repeats instead of failing', await page.evaluate(() => ORBIT.game.state === 'running' && ORBIT.game.drill.id === 'kick' && document.getElementById('ov-results').hidden));
+  await page.evaluate(() => { window.__seen = []; ORBIT.on('drill', d => { if (d.status === 'start') window.__seen.push(d.id); }); window.__auto = setInterval(() => { const G = ORBIT.game; if (G.state !== 'running') return; const now = G.songTime(); for (const n of G.notes) { if (n.t > now + 0.01) break; if (!n.done && n.t > now - 0.1) G.tap(n.lane); } }, 8); });
+  await page.waitForFunction(() => ORBIT.ui.tutorial.i === 4 && ORBIT.game.hypeReady(), null, { timeout: 90000 });
+  check('HYPE drill: button turns ready and the coach says to tap it', await page.evaluate(() => document.getElementById('btn-hype').classList.contains('is-ready') && /HYPE button/.test(document.getElementById('coach-text').textContent)));
+  await page.dispatchEvent('#btn-hype', 'pointerdown');
+  await page.waitForSelector('#ov-tutdone:not([hidden])', { timeout: 15000 });
+  const t2 = await page.evaluate(() => ({ seen: window.__seen, saved: localStorage.getItem('orbitV22Tutorial'), coach: document.getElementById('coach').hidden, state: ORBIT.game.state, progress: localStorage.getItem('orbitArcadeProgress'), fits: (r => r.top >= 0 && r.bottom <= innerHeight + 1)(document.querySelector('#ov-tutdone .sheet').getBoundingClientRect()) }));
+  check('Drills run in order: snare, full beat, hold, HYPE, then the finish card', t2.seen.join() === 'snare,beat,hold,hype' && t2.coach && t2.state === 'idle' && t2.fits, t2);
+  check('Tutorial completion is remembered and writes no career progress', t2.saved === 'true' && !t2.progress, t2);
+  await page.tap('#tut-play');
+  await page.waitForFunction(() => ORBIT.game.state === 'running', null, { timeout: 8000 });
+  check('PLAY YOUR FIRST SET starts Bedroom DJ on Rookie as a real set', await page.evaluate(() => ORBIT.game.stage === 0 && ORBIT.game.difficulty === 'easy' && !ORBIT.game.drill && ORBIT.music.mode === 'set' && ORBIT.game.notes.length > 60));
+  await page.evaluate(() => { clearInterval(window.__auto); ORBIT.game.stop(); });
+  await page.reload(); await page.waitForTimeout(400);
+  check('Second open: no tutorial prompt', await page.evaluate(() => document.getElementById('ov-intro').hidden));
+  await page.evaluate(() => { ORBIT.ui.showView('settings'); document.getElementById('set-intro').click(); });
+  check('Setup → Replay tutorial reopens it', await page.evaluate(() => !document.getElementById('ov-intro').hidden));
+  await page.tap('#intro-play');
+  await page.waitForFunction(() => ORBIT.game.drill && ORBIT.game.state === 'running', null, { timeout: 8000 });
+  await page.tap('#coach-skip');
+  check('SKIP ends the tutorial cleanly (music stopped, coach gone)', await page.evaluate(() => !ORBIT.ui.tutorial.on && !ORBIT.game.drill && ORBIT.game.state === 'idle' && !ORBIT.music.playing && document.getElementById('coach').hidden));
+  check('Tutorial: no console errors', page._errors.length === 0, page._errors.slice(0, 3));
+  await ctx.close();
 
   // ---------------------------------------------------------------- offline / service worker
   current = 'PWA';

@@ -1,4 +1,49 @@
-# ORBIT DJ v2.1.0 — QA report
+# ORBIT DJ — QA report (v2.2.0 update on top of the v2.1.0 report)
+
+## 0. v2.2.0 automated results: 103 / 103 passed
+
+**Date:** 2026-11-18 · **Tested:** the repo root served locally (the same files GitHub Pages serves), headless Chrome via Playwright, with touch emulation at 844×390 for the tutorial.
+**Not tested:** Safari/WebKit and any physical iPhone. Long-press hold notes, the HYPE button and the tutorial have only been exercised by automation and screenshots.
+
+The 80 v2.1 checks below still pass on v2.2.0 (sound-file count updated from 124 to 126). 23 checks are new:
+
+**Band mechanics**
+
+- ✅ Sets run about a minute (50–70 s of music) at every venue tempo
+- ✅ Every chart has hold notes, HYPE phrases and ends on a finale hit
+- ✅ Hold notes never overlap another note in their own lane (and nothing at all on Rookie)
+- ✅ Holding a note to the end of its tail completes it and pays a hold bonus
+- ✅ Letting go early drops the hold without breaking the streak
+- ✅ HYPE charges 25% per glowing phrase and unlocks at 50%
+- ✅ Firing HYPE doubles points, then drains and switches off
+- ✅ Club: missing everything empties the crowd meter and fails the set early, nothing saved
+- ✅ Failed-set results explain what happened and offer TRY AGAIN
+- ✅ Misses play the scratch sound (rate-limited)
+- ✅ Rookie never fails: 30 misses in, the set is still running
+- ✅ Band mechanics: no console errors
+
+**Tutorial**
+
+- ✅ First open: tutorial welcome is on screen immediately
+- ✅ One tap starts drill 1 (kick only) over a metronome, coach visible, no page scroll
+- ✅ An unfinished drill repeats instead of failing
+- ✅ HYPE drill: button turns ready and the coach says to tap it
+- ✅ Drills run in order: snare, full beat, hold, HYPE, then the finish card
+- ✅ Tutorial completion is remembered and writes no career progress
+- ✅ PLAY YOUR FIRST SET starts Bedroom DJ on Rookie as a real set
+- ✅ Second open: no tutorial prompt
+- ✅ Setup → Replay tutorial reopens it
+- ✅ SKIP ends the tutorial cleanly (music stopped, coach gone)
+- ✅ Tutorial: no console errors
+
+**Notes**
+- The legacy tests run with the crowd-fail rule switched off (`G.noFail`, a test hook), because several of them start a set and deliberately do not tap. Crowd failure is tested on its own page.
+- One flaky check: "On-time taps judged on the audio clock (p95 under 35 ms)" failed once in four full runs (p95 37 ms, one 77 ms stall that also cost a single missed note). The automated player now plays 438 notes over a minute instead of about 150, so one long frame under headless load is enough. Passing runs measured p95 29 ms. Treat a real-phone timing check as still open.
+- Screens reviewed by eye from screenshots: welcome, each drill, HYPE ready, finish card, and a set with HYPE active and a held note, in landscape (Grunge Arcade) and portrait (Cyber Aero).
+
+---
+
+# v2.1.0 report (unchanged below)
 
 **Date:** 2026-11-18 · **Build tested:** `dist/site` (the exact contents of `ORBIT-DJ-v2.1.0-netlify.zip`)
 **Automation:** Playwright 1.63 driving Google Chrome for Testing 153 (headless, Linux), with touch and mobile emulation for phone viewports. The standalone HTML was also opened from a local file: all 124 embedded sounds decoded and sets and the beat pad ran with no errors.

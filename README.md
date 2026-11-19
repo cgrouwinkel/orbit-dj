@@ -6,7 +6,9 @@ A free, open-source DJ-learning rhythm game and beat pad for the browser, built 
 
 **Play:** https://cgrouwinkel.github.io/orbit-dj/ (in Safari: Share → *Add to Home Screen*, then play in landscape)
 
-## What's in it (v2.1.0)
+## What's in it (v2.2.0)
+- **Tutorial on first open:** five short hands-on drills (kick, snare, full beat, hold notes, HYPE). Skippable; replay it from Setup.
+- **Band-game play:** round gems on a perspective highway, hold notes, a HYPE meter you charge with glowing runs and fire for double points, a crowd meter that can end the set on Club and Headliner (never on Rookie), streak multiplier up to ×4, and minute-long sets with a finale.
 - **Career:** four venues (Bedroom DJ, House Party, Underground Club, Main Stage), each with its own original song. Notes are charted from the song's real kick, snare and hat parts. Rookie, Club and Headliner difficulties, stars, grades and personal bests.
 - **DJ controls, revealed gradually:** pads, cue, play/pause, crossfader, low EQ and filter. Each has a briefing with a before/after sound demo, best practice, common mistakes and a scored challenge.
 - **Beat pad (MPC-style):**
@@ -26,7 +28,7 @@ The crossfader currently blends layers of one song; true two-deck mixing is on t
 | `docs/` | Changelog, QA report, iPhone deploy guide, developer handoff |
 | `tools/make_sounds.py` | Regenerates the sound library (`sounds/`, `js/sounds-manifest.js`) |
 | `tools/build.py` | Builds a Netlify ZIP, a standalone single-file HTML and a source ZIP into `dist/` |
-| `tests/qa.js` | 80 automated checks (Playwright + Chrome) |
+| `tests/qa.js` | 103 automated checks (Playwright + Chrome) |
 | `scriptable/` | Optional iPhone Scriptable launcher |
 
 ## Deploy
