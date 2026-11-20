@@ -313,14 +313,18 @@ input[type=range]::-moz-range-thumb { width: 22px; height: 30px; border-radius: 
 .quick-field #quick-exit { flex: none; width: 34px; min-height: 34px; padding: 0; }
 #quick-diff { margin: 8px 0 2px; } .quick-sub { margin-top: 8px; }
 @media (orientation: portrait) {
-  .view-songs { grid-template-columns: 1fr; overflow-y: auto; align-content: start; } .sg-side { max-height: 200px; }
-  .sg-editor { grid-template-columns: 1fr; } .sg-rows { max-height: none; overflow: visible; } .sg-settings { overflow: visible; }
+  .view-songs.is-active { display: block; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .view-songs .sg-col { min-height: auto; margin-bottom: 8px; } .sg-side { max-height: 200px; }
+  .sg-editor { display: block; } .sg-editor[hidden] { display: none; }
+  .sg-rows { flex: none; min-height: 0; max-height: none; overflow: visible; } .sg-settings { overflow: visible; }
+  .sg-actions .btn { min-height: 40px; }
 }
 
 /* v3: Mix tab (two decks + mixer), DJ school, beat trainer */
 .in-mix .hud, .in-mix .nowplaying { visibility: hidden; }
-.view-mix { grid-template-rows: 52px auto minmax(0, 1fr); gap: 5px; }
-.mix-wave { width: 100%; height: 100%; display: block; border-radius: var(--r); border: 1px solid var(--line); background: var(--hw-bg); }
+.view-mix { --wave-h: 52px; grid-template-rows: var(--wave-h) auto minmax(0, 1fr); gap: 5px; }
+.mix-coach, .mix-body { position: relative; z-index: 1; }
+.mix-wave { width: 100%; height: var(--wave-h); max-height: var(--wave-h); min-height: 0; align-self: start; display: block; border-radius: var(--r); border: 1px solid var(--line); background: var(--hw-bg); }
 .mix-coach { display: flex; align-items: center; gap: 8px; min-height: 34px; padding: 3px 6px 3px 8px; border-radius: var(--r); background: rgba(0,0,0,.5); border-left: 3px solid var(--accent); }
 .mix-coach.is-pass { border-left-color: var(--good); }
 .mix-coach b { flex: none; max-width: 30%; font: 800 9.5px/1.15 var(--font-ui); letter-spacing: .12em; color: var(--accent); }
@@ -427,14 +431,42 @@ input[type=range]::-moz-range-thumb { width: 22px; height: 30px; border-radius: 
   .mx { grid-template-columns: 38px 28px minmax(0, 1fr) 28px 38px; }
   .dk-side, .dk-tempo { width: 34px; } .dk-transport .btn { font-size: 10px; } .dk-where { display: none; }
 }
+/* A phone held sideways inside Safari leaves only about 740 x 290 pt of page (owner's iPhone, 2026-11-19).
+   The mixer's knobs go two-across and its centre section two-across so nothing overlaps; everything slims down. */
+@media (orientation: landscape) and (max-height: 340px) {
+  .topbar { min-height: 34px; padding: 1px 10px; }
+  .logo { font-size: 19px; } .logo-tag { font-size: 9px; }
+  .tab { min-height: 30px; min-width: 42px; padding: 1px 4px; gap: 0; } .tab svg { font-size: 14px; } .tab span { font-size: 8px; }
+  .view { padding: 5px 8px; }
+  .seg-diff button { font-size: 8.5px; letter-spacing: 0; padding: 4px 1px; }
+  .view-mix { --wave-h: 30px; gap: 4px; }
+  .mix-coach { min-height: 26px; padding: 1px 4px 1px 6px; } .mix-coach > span { font-size: 11px; line-height: 1.2; } .mc-btns .btn { min-height: 24px; padding: 2px 6px; }
+  .mix-body { grid-template-columns: minmax(0, 1fr) 316px minmax(0, 1fr); gap: 5px; }
+  .dk { padding: 4px; gap: 3px; } .dk-head { min-height: 20px; } .dk-load { min-height: 20px; } .dk-bpm { font-size: 12px; } .dk-where { display: none; }
+  .dk-side { width: 62px; grid-template-columns: 1fr 1fr; } .dk-side .btn { font-size: 13px; }
+  .dk-tempo { width: 30px; }
+  .dk-transport .btn { min-height: 34px; font-size: 9px; } .dk-transport svg { width: 15px; height: 15px; }
+  .pad-modes .btn { min-height: 22px; font-size: 7.5px; } .dj-pad { font-size: 9px; }
+  .mx { grid-template-columns: 66px 31px minmax(0, 1fr) 31px 66px; grid-template-rows: minmax(0, 1fr) 30px; padding: 4px; }
+  .view-songs { grid-template-columns: 150px minmax(0, 1fr); }
+  .sg-arr { overflow-y: auto; } .sg-rows { flex: none; overflow: visible; min-height: 0; } .sg-col { padding: 6px; gap: 5px; }
+  .mx-col { grid-template-columns: 1fr 1fr; }
+  .mx-mid { grid-template-columns: 1fr 1fr; grid-template-rows: 4px repeat(4, minmax(0, 1fr)); }
+  #mx-master, .mx-mid .mx-pair { grid-column: 1 / -1; }
+  .kn-dial { max-height: 30px; }
+}
 @media (orientation: portrait) {
-  .view-mix { display: none; grid-template-rows: 60px auto auto; overflow-y: auto; align-content: start; }
+  .view-mix { --wave-h: 60px; display: none; grid-template-rows: var(--wave-h) auto auto; overflow-y: auto; align-content: start; }
   .view-mix.is-active { display: grid; }
   .mix-body { grid-template-columns: 1fr 1fr; grid-template-areas: "a b" "m m"; }
   #dk-0 { grid-area: a; } #dk-1 { grid-area: b; } .mx { grid-area: m; height: 270px; }
   .dk { height: 250px; } .dk-side { width: 30px; } .dk-tempo { width: 32px; } .dk-where { display: none; }
   .dk-transport .btn { font-size: 9px; } .pad-modes { flex-wrap: wrap; } .pad-modes .btn { flex: 1 0 30%; }
   .school-cols { grid-template-columns: 1fr; } .mix-coach { flex-wrap: wrap; }
+  .mix-coach > b { max-width: none; flex: 1; } .mix-coach > span { order: 3; flex: 0 0 100%; -webkit-line-clamp: 3; padding-bottom: 2px; }
+}
+@media (orientation: portrait) and (max-height: 760px) {
+  .view-mix { --wave-h: 46px; } .dk { height: 222px; } .mx { height: 244px; }
 }
 @media (min-width: 1000px) and (min-height: 600px) {
   .view-mix { grid-template-rows: 90px auto minmax(0, 520px); max-width: 1300px; margin: 0 auto; }

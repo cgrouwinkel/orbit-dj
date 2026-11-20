@@ -1,5 +1,24 @@
 # ORBIT DJ — Changelog
 
+## v4.0.1 — 2026-11-19 (iPhone layouts, from the owner's first screenshots on a real iPhone)
+
+The owner tested v4.0.0 on an iPhone and reported that everything is easier to reach with the phone held upright than sideways (iPad is fine both ways). Her screenshots also gave the real page sizes inside Safari: about 395 × 702 pt upright and 737 × 287 pt sideways. Earlier layout tests assumed 844 × 390, which Safari's bars never leave free.
+
+### Fixes
+- **Mix tab, phone sideways:** controls no longer overlap. Below 340 pt of height the top bar, lesson strip and waveform shrink, mixer knobs sit two across, and the deck's side buttons form a 2 × 2 block.
+- **Mix tab, both ways:** the waveform has a fixed height. On iOS it could grow over the lesson strip and behind the decks.
+- **Mix tab, upright:** the lesson instruction gets its own full-width line (up to three lines) under the title and buttons.
+- **Song builder, upright:** the page is now one scrolling column. The arrangement used to overlap the settings panel.
+- **Song builder, sideways:** the arrangement column scrolls as a whole, so the action buttons can be reached.
+
+### Changes
+- Upright is the recommended way to hold an iPhone. The welcome text and Setup say so, and a one-time tip appears the first time the phone is turned sideways.
+- `tests/phone-layout.js` checks Mix, Play, the beat pad and the song builder at both real iPhone page sizes for overlapping, off-screen and undersized controls.
+
+### Not done
+- Step buttons on the beat pad's grid are still small upright (about 20 × 30 pt).
+- None of this has been seen on an iPhone yet. The checks ran in headless Chrome at the measured sizes.
+
 ## v4.0.0 — 2026-11-19 (deeper gameplay, career map, Studio song builder, your own music)
 
 ### Gameplay

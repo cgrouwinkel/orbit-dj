@@ -4,9 +4,9 @@
 
 A free, open-source DJ-learning rhythm game and beat pad for the browser, built for iPhone (Safari / Home Screen app) and also usable on iPad, Android and desktop.
 
-**Play:** https://cgrouwinkel.github.io/orbit-dj/ (in Safari: Share → *Add to Home Screen*, then play in landscape)
+**Play:** https://cgrouwinkel.github.io/orbit-dj/ (in Safari: Share → *Add to Home Screen*, then hold the phone upright; iPad works both ways)
 
-## What's in it (v4.0.0)
+## What's in it (v4.0.1)
 - **Mix tab, a two-deck DJ controller:** jog wheels, tempo faders, SYNC, CUE, loops, hot cues, loop roll, beat jump, sampler pads, 3-band EQ, filter, gain, channel faders, crossfader, FX and headphone split cue, with scrolling waveforms.
 - **DJ school:** 14 lessons (one per control) that check what you actually do, plus 4 scored transition gigs.
 - **Beat trainer:** 7 beat-making lessons on the beat pad.

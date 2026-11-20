@@ -1,4 +1,4 @@
-# ORBIT DJ — Claude handoff (after v4.0.0, 2026-11-19)
+# ORBIT DJ — Claude handoff (after v4.0.1, 2026-11-19)
 
 ## Source of truth
 - This source bundle (`ORBIT-DJ-v2.1.0-source.zip`) replaces earlier bundles and `ORBIT-Arcade-Final-Prototype.zip`.
@@ -19,12 +19,18 @@ Personal iPhone only (no computer), deploys to Netlify from iPhone via ZIP uploa
 | `js/game.js` | Venues (each has its own song), charts via `M.chartSet`, judgement (windows 190/130/85 ms), v1 scoring/stars/grades, guide drums setting, controller lessons + challenges, demos, pause/resume, interruption handling |
 | `js/beatpad.js` | MPC-style beat pad: event-list patterns A–D (`{{pad, step, velocity, tune}}`), audio-clock sequencer with swing, overdub with `_skip` to avoid double hits, count-in, note repeat (free clock when stopped), 16 Levels, mute/solo/erase, per-kit pad params, choke, undo, backing sync, JSON v1/v2 import/export, WAV bounce via `renderOffline` + `encodeWav` |
 | `js/ui.js` | Views, canvas highway + spectrum, faders, overlays (intro, briefing, results, audio, calibration), keyboard, render loop, SW registration |
-| `css/orbit.css` | Tokens for `.theme-grunge` / `.theme-aero`; layouts for landscape phone, portrait, iPad/desktop |
+| `css/orbit.css` | Tokens for `.theme-grunge` / `.theme-aero`; layouts for portrait phone (primary on iPhone), short landscape phone (`max-height: 340px`), iPad/desktop |
 | `sw.js` | Network-first, versioned cache. **Bump `VERSION` together with `O.VERSION`** (build.py checks). |
 
 Storage keys: v1 keys kept (`orbitArcadeProgress`, `orbitArcadeTheme` (raw string), `orbitArcadeControllerBestV1`, `orbitArcadeCombinedV11`); new keys are prefixed `orbitV2*`.
 
 Sounds: `python3 tools/make_sounds.py` regenerates `sounds/` and `js/sounds-manifest.js` (deterministic). Build and test: `python3 tools/build.py`, serve `dist/site`, then `node tests/qa.js <url>` (set `PW` to the Playwright module path if needed): 103 checks. `tools/render_previews.js` renders listening previews with the app's own engine.
+
+## Device feedback so far (owner's iPhone, v4.0.0, 2026-11-19)
+- The app loads and plays in Safari on her iPhone. She finds it much easier to use upright than sideways; iPad is fine both ways. **Design phone layouts upright first.** Sideways must not overlap, but it is the secondary layout on a phone.
+- Real page sizes inside iPhone Safari, measured from her screenshots: about **395 × 702 pt upright** and **737 × 287 pt sideways**. Do not test phone layouts at 844 × 390; Safari's bars never leave that much room. `tests/phone-layout.js` checks both real sizes.
+- Sound feedback before that: no voice-like or brass sounds, no bright loud hi-hats, clean song intros. See `CLEAN` and `TOPS_LEVEL` in `js/music.js`.
+- v4.0.1 layout fixes have not been confirmed on the phone yet.
 
 ## v4.0 additions
 - **Song model (music.js):** `M.song` = `{ key, kit, swaps: { bass, keys, lead, vocal }, mutes, beat: { kit, patterns } }`, applied in `helpers.n` (role by instrument via `ROLE`), `scheduleStep` (kit translation `padIn`, beat-pad drums `beatEvents`) and `chartAt` (`beatChart`). `buildForm` accepts rows `{ sec, bars, drums: 'style' | 'A'..'D' | 'none' }`. `M.start({ song, form, audio })`, `M.chartSet(..., song)`, `M.renderOffline(..., { song, form })`. Intros / mix-ins drop vocal and brass notes; `TOPS_LEVEL` scales hats and percussion.
@@ -76,7 +82,7 @@ Sounds: `python3 tools/make_sounds.py` regenerates `sounds/` and `js/sounds-mani
 9. Sets are still 24 seconds; charts now come from the songs. Beat pad patterns are per device, with no cloud sync.
 
 ## Recommended next priorities
-1. **Device pass.** Owner runs `docs/QA-REPORT.md` §4 on the iPhone; fix whatever fails first.
+1. **Device pass.** Owner confirms the v4.0.1 phone layouts (Mix and song builder, upright and sideways); fix whatever fails first. Larger step buttons on the upright beat pad are the next known gap.
 2. **Real decks (milestone priority 4).** Get the v0.5 source. Build two `AudioBufferSourceNode` decks (playbackRate tempo, per-deck 3-band EQ + filter, true crossfader, cue to the pre-fader bus) behind the same mixer UI; keep Arcade venues as the teaching layer, and make Main Stage a real two-deck transition.
 3. **Music:** act on the owner's listening feedback; longer forms (16–32 bars with breakdowns), velocity layers for the kits, an optional sample-chop workflow in the beat pad (slice a bounced loop onto pads).
 4. **Gameplay depth:** longer sets per venue, practice mode with slow-down, unlock rules and achievements, beat-pad challenges (e.g. "program this groove") that feed the career.

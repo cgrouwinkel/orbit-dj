@@ -1,4 +1,22 @@
-# ORBIT DJ — QA report (v4.0.0)
+# ORBIT DJ — QA report (v4.0.1)
+
+## v4.0.1 automated results (phone layouts)
+
+| Suite | Result |
+|---|---|
+| `tests/phone-layout.js` (Mix lesson, Mix pads, Play, beat pad, song builder at 737 × 287 and 395 × 702) | 10 / 10 screens: no overlapping or off-screen controls, no page scrolling |
+| `tests/qa-mix.js` | 72 / 72 |
+| `tests/qa-v4.js` | 45 / 45 |
+| `tests/qa.js` | 105 / 105 |
+
+**Date:** 2026-11-19 · **Tested:** the repo root served locally, headless Chrome via Playwright with touch emulation. The two phone sizes are the page sizes measured from the owner's iPhone screenshots of v4.0.0 in Safari. **Not tested:** Safari/WebKit or any physical phone for this release; the owner has not yet seen v4.0.1.
+
+Notes:
+- The owner's v4.0.0 screenshots showed the Mix tab overlapping with the phone sideways, and the lesson strip hidden behind the waveform. Both reproduced here only at the real page sizes, not at 844 × 390.
+- The upright song builder scrolls as a page (371 pt of scroll at 395 × 702). That is intended.
+- Listed, not failed: the beat pad's step buttons are 20 × 30 pt upright. Sideways on the Mix tab the narrowest control is 24 pt wide and the shortest is 20 pt tall.
+- Screens reviewed by eye from screenshots: Mix lesson upright and sideways, song builder upright and sideways.
+
 
 ## v4.0.0 automated results
 
