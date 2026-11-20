@@ -1,4 +1,21 @@
-# ORBIT DJ — QA report (v4.3.0)
+# ORBIT DJ — QA report (v4.3.1)
+
+## v4.3.1 automated results (live-show scene in Cyber Aero)
+
+| Suite | Result |
+|---|---|
+| `tests/qa-v4.js` (Live-show scene group: 2 new Aero checks, 6 in all) | 51 / 51 |
+| `tests/qa.js` | 112 / 112 |
+| `tests/qa-mix.js` | 84 / 84 |
+| `tests/phone-layout.js` | 10 / 10 screens |
+
+**Date:** 2026-11-20 · **Tested:** the repo root served locally, headless Chrome via Playwright with touch emulation. **Not tested:** Safari/WebKit and any physical phone, including how smoothly either scene draws on an iPhone or iPad.
+
+What the new checks cover: switching to Cyber Aero mid-set draws the Aero room above the highway (sampled pixel is sky blue, not the highway background); a fresh set in Cyber Aero gets the OHHHH bubble and the "THAT'S A BEAT" callout.
+
+Measured in headless Chrome on this machine (software rendering, no GPU): at 395 × 702 every Aero room ran at 16.7 to 16.9 ms per frame (60 fps). At 1024 × 720 on the main stage, frame time with the scene on was 19.4 ms in Aero and 17.6 ms in Grunge at 2× pixel density, and 22.6 ms in Aero and 19.3 ms in Grunge at 3×; with the scene switched off both themes were about 17 ms. The scene's own drawing code took under 0.5 ms per frame; the rest is painting. None of this says how an iPad or iPhone performs.
+
+Reviewed by eye from screenshots at 395 × 702, 737 × 287 (phone sideways) and 1024 × 720: the Aero crib with a low crowd, the Aero OHHHH moment (phone raised to film), the party, the club, the main stage; Grunge unchanged.
 
 ## v4.3.0 automated results (live-show scene)
 

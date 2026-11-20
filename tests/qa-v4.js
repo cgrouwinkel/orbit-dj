@@ -241,7 +241,13 @@ function check(name, ok, detail) { results.push({ group: current, name, ok: !!ok
     o.aha = O.scene.state.aha && O.scene.state.bubble && O.scene.state.bubble.text === 'OHHHH' && /THAT.S A BEAT/.test(document.getElementById('callout').textContent);
     await wait(1700); o.cta = /8 MORE FOR ×3/.test(document.getElementById('callout').textContent);
     o.onlyOnce = O.scene.aha() === false;
-    O.ui.setTheme('aero'); await wait(200); o.aeroRuns = G.state === 'running'; O.ui.setTheme('grunge'); await wait(100);
+    O.ui.setTheme('aero'); await wait(200); o.aeroRuns = G.state === 'running'; o.aeroRoom = px() > 150; // Aero highway background is #021631 (sum 73); its room is sky blue
+    // v4.3.1: a fresh set in Cyber Aero gets the same OHHHH moment, drawn in the Aero room
+    G.stop(); G.select(0); await G.start(); await wait(300);
+    const t1 = performance.now(); while (G.multiplier() < 2 && performance.now() - t1 < 30000) await wait(50);
+    await wait(250); o.aeroAha = O.scene.state.aha && !!O.scene.state.bubble && O.scene.state.bubble.text === 'OHHHH' && /THAT.S A BEAT/.test(document.getElementById('callout').textContent);
+    o.aeroCallout = getComputedStyle(document.getElementById('callout')).top;
+    O.ui.setTheme('grunge'); await wait(100);
     clearInterval(auto); G.stop();
     return o;
   });
@@ -249,6 +255,8 @@ function check(name, ok, detail) { results.push({ group: current, name, ok: !!ok
   check('Grunge theme draws the room above the highway during a set', sc.roomDrawn, sc);
   check('First ×2 of a set: the room says OHHHH and the callout reads THAT’S A BEAT, then the call to action', sc.aha && sc.cta, sc);
   check('The OHHHH moment happens once per set; switching theme mid-set keeps the set running', sc.onlyOnce && sc.aeroRuns, sc);
+  check('Cyber Aero draws its own room above the highway too', sc.aeroRoom, sc);
+  check('Cyber Aero: a new set gets the OHHHH moment and THAT’S A BEAT callout', sc.aeroAha, sc);
 
   current = 'Career map';
   const cr = await page.evaluate(async () => {

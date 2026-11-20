@@ -1,5 +1,24 @@
 # ORBIT DJ — Changelog
 
+## v4.3.1 — 2026-11-20 (Cyber Aero gets the live show too)
+
+Owner feedback: the app opens in Cyber Aero, so the v4.3.0 room never showed up for her. The scene now draws in both themes, in each theme's own style.
+
+### Play screen, Cyber Aero theme
+- **The same four rooms, redrawn as glossy sky-blue spaces** above the highway (`js/scene.js`, `AERO` palettes):
+  - The crib: a window with drifting clouds, a glass couch, glossy orb string lights and a bubble lamp. The friend on the left is on their phone; once the set gets good (crowd above 70 %, HYPE or the OHHHH moment) the phone goes up to film you, with a red recording dot.
+  - House party: balloons floating between six people, orb lights.
+  - Club and main stage: an LED wall with an equaliser that moves with the beat and the crowd, navy silhouettes with coloured rim light, aqua and lilac beams.
+  - A cyan grid floor beside the highway, bubbles rising through the room (more as it warms up), a glass sheen across the top, and the speech bubbles as glossy pills.
+- Crowd reactions, heckles and the OHHHH moment work exactly as in Grunge.
+- Callouts and PERFECT / MISS sit lower in this theme too, so they clear the room.
+- The Aero scene batches its grid lines, bubbles and equaliser bars into single draw calls.
+
+### Unchanged
+- Grunge Arcade looks as in v4.3.0.
+- With reduced motion on, both rooms are drawn still. A very short highway (phone sideways) still gets no room strip.
+- The scene shortens the highway by a fifth in both themes now. Timing windows are unchanged.
+
 ## v4.3.0 — 2026-11-20 (Grunge Arcade becomes a live show: the crib, the crowd, the OHHHH moment)
 
 Owner request: make the Grunge theme's gameplay background, effects and colour feel like performing live in a band game, except the first gig is your friends on the couch at the crib, with humour, and an "aha" moment when you first find the beat.

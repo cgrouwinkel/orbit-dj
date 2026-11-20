@@ -97,8 +97,8 @@
     c.setTransform(hw.dpr, 0, 0, hw.dpr, 0, 0);
     c.fillStyle = P.bg; c.fillRect(0, 0, W, H);
     const reduce = O.reducedMotion();
-    // Grunge theme: a strip above the highway shows the room you are playing to (js/scene.js). Too short a canvas gets no strip.
-    const sceneOn = !P.aero && !!O.scene, bandH = sceneOn && H - hw.inset >= 150 ? O.clamp((H - hw.inset) * 0.2, 32, 84) : 0;
+    // Both themes: a strip above the highway shows the room you are playing to (js/scene.js). Too short a canvas gets no strip.
+    const sceneOn = !!O.scene, bandH = sceneOn && H - hw.inset >= 150 ? O.clamp((H - hw.inset) * 0.2, 32, 84) : 0;
     const hitY = H - 18, topY = bandH ? hw.inset + bandH : 2, k = 1.6, vy = (topY * (1 + k) - hitY) / k;
     const yAt = p => vy + (hitY - vy) / (1 + k * p), sAt = p => 1 / (1 + k * p);
     const margin = 4, bw = W - margin * 2, cx = W / 2;
@@ -112,9 +112,9 @@
     const ell = (x, y, rx, ry) => { c.beginPath(); c.ellipse(x, y, Math.max(0.5, rx), Math.max(0.5, ry), 0, 0, Math.PI * 2); };
 
     if (sceneOn) {
-      O.scene.draw(c, W, H, { top: hw.inset, horizon: topY }, G, reduce);
+      O.scene.draw(c, W, H, { top: hw.inset, horizon: topY, aero: P.aero }, G, reduce);
       c.beginPath(); c.moveTo(xAt(0, 1), topY); c.lineTo(xAt(4, 1), topY); c.lineTo(xAt(4, pBottom), H); c.lineTo(xAt(0, pBottom), H); c.closePath();
-      c.fillStyle = 'rgba(9,8,11,.9)'; c.fill(); // the highway surface: dark, with a little of the room showing through
+      c.fillStyle = P.aero ? 'rgba(2,22,49,.88)' : 'rgba(9,8,11,.9)'; c.fill(); // the highway surface: dark, with a little of the room showing through
     }
     // lanes
     for (let i = 0; i < 4; i++) {
