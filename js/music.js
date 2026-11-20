@@ -66,7 +66,7 @@
 
     // ---------------------------------------------------------------- bass house: bouncy donk bass, chipmunk vocal chops, piano stabs
     basshouse: {
-      label: 'Bass house', mix: { melody: 6, bass: -1, drums: 0 }, kit: 'club', swing: 0.1, level: 1, duck: 0.55, duckBass: 0.7,
+      label: 'Bass house', mix: { melody: 8, bass: -1, drums: 0 }, kit: 'club', swing: 0.1, level: 1, duck: 0.55, duckBass: 0.7,
       inst: ['donk', 'sub', 'piano', 'vah', 'vee', 'vyeah', 'supersaw'],
       pads: { kick: 0, snare: 1, hat: 3, ohat: 3, fx: 15, count: 6, roll: 5 },
       chords: [[53, 56, 60, 65], [53, 56, 60, 65], [53, 56, 61, 65], [51, 55, 58, 63], [53, 56, 60, 65], [53, 56, 61, 65], [51, 56, 60, 63], [51, 55, 58, 63]],
@@ -143,9 +143,9 @@
 
     // ---------------------------------------------------------------- dubstep: melodic intro and build, then growl-bass call and response at half time
     dubstep: {
-      label: 'Dubstep', mix: { melody: 2, bass: 0, drums: 2 }, kit: 'midnight', swing: 0, level: 1, duck: 0.35, duckBass: 0,
+      label: 'Dubstep', mix: { melody: 7.5, bass: 0, drums: 2 }, kit: 'midnight', swing: 0, level: 1, duck: 0.35, duckBass: 0,
       inst: ['supersaw', 'sub', 'gr1', 'gr2', 'gr3', 'gr4', 'vah', 'vee', 'vyeah', 'pluck'],
-      pads: { kick: 4, snare: 8, hat: 2, ohat: 3, fx: 11, count: 7, roll: 1 },
+      pads: { kick: 4, snare: 8, hat: 2, ohat: 3, fx: 11, count: 6, roll: 1 },
       chords: [[55, 58, 62, 67], [55, 58, 63, 67], [53, 58, 62, 65], [53, 57, 60, 65], [55, 58, 62, 67], [55, 58, 63, 67], [53, 58, 62, 65], [53, 57, 60, 65]],
       roots: [31, 27, 34, 29, 31, 27, 34, 29],
       vocal: [[[0, 'vah', 74, 1], [4, 'vee', 70, 0.5], [6, 'vah', 72, 0.5], [8, 'vah', 74, 1.5]], [[0, 'vah', 75, 1], [4, 'vee', 74, 0.5], [6, 'vah', 70, 1.5]],
@@ -187,7 +187,7 @@
     trap: {
       label: 'Trap', mix: { melody: 1, bass: -1, drums: 1.5 }, kit: 'midnight', swing: 0, level: 1, duck: 0.25, duckBass: 0,
       inst: ['b808', 'bell', 'piano', 'choir', 'flute', 'brass', 'pluck'],
-      pads: { kick: 4, snare: 1, hat: 2, ohat: 3, fx: 11, count: 7, roll: 1 },
+      pads: { kick: 4, snare: 1, hat: 2, ohat: 3, fx: 11, count: 6, roll: 1 },
       chords: [[55, 58, 62], [55, 58, 62], [51, 55, 58, 62], [50, 54, 57, 60], [55, 58, 62], [55, 58, 62], [51, 55, 58, 62], [50, 54, 57, 60]],
       b808: [ // [step, midi, beats, glide semitones]
         [[0, 31, 1.6], [7, 31, 0.6], [10, 34, 1.4, -3]], [[0, 31, 1.6], [7, 38, 0.6], [10, 29, 1.4]], [[0, 27, 1.6], [7, 27, 0.6], [10, 27, 1.4, 4]], [[0, 26, 1.6], [7, 26, 0.6], [10, 30, 1.4]],
@@ -253,7 +253,7 @@
 
     // ---------------------------------------------------------------- chipmunk soul: pitched-up vocal chops, piano, strings and horns over hard drums
     soul: {
-      label: 'Chipmunk soul', mix: { melody: 0, bass: 1.5, drums: 1.5 }, kit: 'dusty', swing: 0.08, level: 1, duck: 0, bed: 'vinyl',
+      label: 'Soul', mix: { melody: 0, bass: 1.5, drums: 1.5 }, kit: 'dusty', swing: 0.08, level: 1, duck: 0, bed: 'vinyl',
       inst: ['chipoo', 'chipah', 'piano', 'upright', 'strings', 'brass', 'choir'],
       pads: { kick: 0, snare: 1, hat: 2, ohat: 3, fx: 11, count: 5 },
       chords: [[56, 60, 61, 65], [56, 58, 61, 65], [54, 58, 61, 65], [56, 58, 61, 63], [54, 58, 61, 65], [56, 60, 63], [53, 56, 60, 63], [53, 56, 58, 61]],
@@ -295,10 +295,10 @@
   const firstOfSection = bar => bar === 0 || sectionOf(bar) !== sectionOf((bar + 7) % 8);
 
   // Extra drum grooves every style gets for the song form:
-  // I intro (kick, hats, no snare) · K breakdown (quiet hats only) · R1 / R2 the snare roll of a build.
+  // I intro (kick and a soft hat only) · K breakdown (quiet hats only) · R1 / R2 the snare roll of a build.
   for (const S of Object.values(STYLES)) {
     const A = S.drums.A, sn = S.pads.roll === undefined ? S.pads.snare : S.pads.roll;
-    S.drums.I = { kick: A.kick, hat: A.hat, perc: A.perc, fx: A.fx };
+    S.drums.I = { kick: A.kick, hat: (A.hat || []).map(h => [h[0], h[1] * 0.7, h[2], h[3]]), fx: A.fx }; // intros stay plain: kick and a soft hat, no shakers or busy tops
     S.drums.K = { hat: (A.hat || []).map(h => [h[0], h[1] * 0.6, 9, h[3]]), perc: (A.perc || []).map(h => [h[0], h[1], 9, h[3]]) };
     S.drums.R1 = { kick: [0, 4, 8, 12].map(s => [s, 0.8, 9]), snare: [0, 2, 4, 6, 8, 10, 12, 14].map((s, i) => [s, 0.34 + 0.04 * i, s % 4 === 0 ? 0 : 1, sn]) };
     S.drums.R2 = { kick: [0, 4, 8].map(s => [s, 0.85, 9]), snare: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].map((s, i) => [s, 0.5 + 0.045 * i, s % 4 === 0 ? 0 : s % 2 === 0 ? 1 : 2, sn]) };
@@ -313,10 +313,13 @@
     deck48: [['mixin', 8], ['intro', 4], ['verse', 8], ['build', 4], ['drop', 8], ['drop2', 8], ['mixout', 8]],
     deck64: [['mixin', 8], ['intro', 8], ['verse', 8], ['build', 8], ['drop', 8], ['break', 8], ['drop2', 8], ['mixout', 8]]
   };
+  // bars: a named form, a bar count, or a list of rows { sec, bars, drums } from the song builder
+  // (drums: 'style' = the song's own groove, 'A'-'D' = a beat-pad pattern saved with the song, 'none').
   function buildForm(bars) {
-    const secs = FORMS[bars] || FORMS[bars > 28 ? 32 : 24], out = [], twoDrops = secs.some(x => x[0] === 'drop2');
+    const rows = Array.isArray(bars) ? bars : null;
+    const secs = rows ? rows.map(r => [r.sec === 'outro' ? 'mixout' : r.sec, r.bars, r.drums || 'style']) : FORMS[bars] || FORMS[bars > 28 ? 32 : 24], out = [], twoDrops = secs.some(x => x[0] === 'drop2');
     let n = 0;
-    for (const [sec, len] of secs) for (let pos = 0; pos < len; pos++, n++) {
+    for (const [sec, len, src] of secs) for (let pos = 0; pos < len; pos++, n++) {
       const last = pos === len - 1, full = sec === 'drop' || sec === 'drop2' || sec === 'break';
       let dk = last ? 'F' : full ? 'B' : 'A', bass = true, mel = true;
       if (sec === 'mixin') { dk = last ? 'F' : pos < 4 ? 'I' : 'A'; bass = false; mel = false; }
@@ -324,7 +327,7 @@
       else if (sec === 'intro') { if (!last) dk = 'I'; bass = pos >= 2; }
       else if (sec === 'build') { dk = pos < len - 2 ? 'K' : pos === len - 2 ? 'R1' : 'R2'; bass = false; }
       else if (sec === 'break') { dk = last ? 'R2' : 'K'; bass = false; }
-      out.push({ n, sec, pos, len, first: pos === 0, last, full, dk, bass, mel, hb: (full ? 4 : 0) + pos % 4, start: n - pos,
+      out.push({ n, sec, pos, len, first: pos === 0, last, full, dk, bass, mel, src: src || 'style', hb: (full ? 4 : 0) + pos % 4, start: n - pos,
         lead: sec === 'drop2' || (!twoDrops && sec === 'drop' && pos >= 4) });
     }
     return out;
@@ -335,6 +338,7 @@
 
   // Which drum hits at this step are notes for the player. X: bar info; rule: { lvl, single, stage }
   function chartAt(S, X, step, rule) {
+    if (X.src && X.src !== 'style') return X.src === 'none' ? [] : beatChart(X, step, rule);
     const spec = S.drums[X.dk] || {}, first = X.first, out = [];
     for (const el of ['kick', 'snare', 'hat', 'fx']) {
       if (el === 'fx' && rule.stage === 0) continue;
@@ -347,8 +351,48 @@
     return out;
   }
 
+  // ---------- user songs (song builder) ----------
+  // M.song: { key (semitones), kit, swaps: { bass, keys, lead, vocal }, mutes: { drums, bass, keys, lead, vocal }, rows, beat: { kit, patterns } }
+  const ROLE = { vah: 'vocal', voh: 'vocal', vee: 'vocal', vyeah: 'vocal', vhey: 'vocal', chipoo: 'vocal', chipah: 'vocal', choir: 'vocal',
+    pluck: 'lead', bell: 'lead', flute: 'lead', vibes: 'lead', piano: 'keys', ep: 'keys', supersaw: 'keys', strings: 'keys', brass: 'keys', pad: 'keys' };
+  const CLEAN = { vah: 'pluck', voh: 'pluck', vee: 'pluck', vyeah: 'pluck', vhey: 'pluck', chipoo: 'vibes', chipah: 'vibes', choir: 'strings', brass: 'piano' };
+  const SOUNDS = { bass: ['sub', 'b808', 'upright', 'techbass', 'donk', 'reese'], keys: ['piano', 'ep', 'supersaw', 'strings', 'brass', 'pad'], lead: ['pluck', 'bell', 'flute', 'vibes'], vocal: ['vah', 'voh', 'chipoo', 'chipah', 'choir'] };
+  // Drum-pad categories, so a groove written for one kit can be played on another.
+  const PADCAT = [[/KICK 2|PUNCH/, 'kick2'], [/KICK/, 'kick'], [/BIG SNARE/, 'snare2'], [/SNARE/, 'snare'], [/CLAP/, 'clap'], [/OPEN/, 'ohat'], [/HAT/, 'hat'], [/RIM|SNAP/, 'rim'], [/SHAKER|PERC/, 'shaker'],
+    [/LOW TOM|CONGA LO|808 TOM/, 'tomlo'], [/HIGH TOM|CONGA HI/, 'tomhi'], [/TAMB|COWBELL/, 'tamb'], [/RIDE/, 'ride'], [/CRASH|IMPACT/, 'crash']];
+  const padCat = name => { for (const [re, c] of PADCAT) if (re.test(name)) return c; return null; };
+  const CAT_FALLBACK = { kick2: 'kick', snare2: 'snare', clap: 'snare', snare: 'clap', rim: 'shaker', shaker: 'hat', tomhi: 'tomlo', tomlo: 'tomhi', tamb: 'shaker', ride: 'ohat', crash: 'ohat' };
+  const padMaps = {};
+  function padIn(from, to, i) {
+    if (from === to) return i;
+    const key = from + '>' + to;
+    if (!padMaps[key]) {
+      const K = (window.ORBIT_SOUNDS || { kits: {} }).kits, a = K[from] || [], b = K[to] || [], find = c => b.findIndex(p => padCat(p.name) === c);
+      padMaps[key] = a.map(p => { const c = padCat(p.name); if (!c) return -1; let j = find(c); if (j < 0 && CAT_FALLBACK[c]) j = find(CAT_FALLBACK[c]); return j; });
+    }
+    const j = padMaps[key][i]; return j === undefined ? -1 : j;
+  }
+  const kitOf = S => (M.song && M.song.kit) || S.kit;
+  const LANE_CAT = { kick: 0, kick2: 0, snare: 1, snare2: 1, clap: 1, rim: 1, hat: 2, ohat: 2, shaker: 2, tamb: 2, ride: 2 };
+  function beatEvents(X, step) { // beat-pad pattern events that fall on this sixteenth of the bar
+    const B = M.song && M.song.beat, P = B && B.patterns[X.src]; if (!P) return [];
+    const s = (X.pos % P.bars) * 16 + step;
+    return P.events.filter(e => Math.floor(e.step + 1e-6) === s);
+  }
+  function beatChart(X, step, rule) {
+    const B = M.song.beat, names = ((window.ORBIT_SOUNDS || { kits: {} }).kits[B.kit] || []), out = [];
+    if (rule.lvl === 0 && step % 2) return out;
+    for (const e of beatEvents(X, step)) {
+      if (e.step % 1 > 0.01) continue; // off-grid hits (note repeat) are heard, not charted
+      const c = names[e.pad] ? padCat(names[e.pad].name) : null, lane = c in LANE_CAT ? LANE_CAT[c] : names.length ? 3 : e.pad % 4;
+      if (!out.some(x => x.lane === lane)) out.push({ el: ['kick', 'snare', 'hat', 'fx'][lane], lane, hit: [step, e.velocity, 0, e.pad], beat: e });
+    }
+    if (rule.single && out.length > 1) { out.sort((a, b) => PRIORITY.indexOf(a.el) - PRIORITY.indexOf(b.el)); return [out[0]]; }
+    return out;
+  }
+
   const M = (O.music = {
-    STYLES, resolve, chartAt, sectionOf,
+    STYLES, resolve, chartAt, sectionOf, SOUNDS, song: null,
     playing: false, mode: null, style: 'boombap', bpm: 88, origin: 0, k: 0, endAt: Infinity,
     guideLevel: 0, chartRule: null, timer: 0, session: null, onStep: null, form: null, roll: null
   });
@@ -356,16 +400,17 @@
   M.unit = () => 60 / M.bpm / 4;
   M.barLen = () => 60 / M.bpm * 4;
   M.nextBarTime = function (after) { const bar = M.barLen(); return M.origin + Math.max(0, Math.ceil((after - M.origin) / bar - 1e-6)) * bar; };
-  M.assetsFor = function (id) {
+  M.assetsFor = function (id, song) {
     const S = STYLES[resolve(id)], A = O.assets;
-    let p = A.kitPaths(S.kit);
-    S.inst.forEach(n => { p = p.concat(A.instPaths(n)); });
+    let p = A.kitPaths((song && song.kit) || S.kit);
+    S.inst.forEach(n => { p = p.concat(A.instPaths(CLEAN[n] || n)); });
+    if (song) { Object.values(song.swaps || {}).forEach(n => { if (n) p = p.concat(A.instPaths(n)); }); if (song.beat) p = p.concat(A.kitPaths(song.beat.kit)); }
     if (S.bed) p.push(A.fxPath(S.bed));
     p.push(A.fxPath('riser'), A.fxPath('impact'));
     return p.filter(Boolean);
   };
   // Sound for a rhythm-game lane in the current style (so player hits match the song's kit).
-  M.laneSound = function (id, lane) { const S = STYLES[resolve(id)], el = ['kick', 'snare', 'hat', 'fx'][lane]; return { kit: S.kit, pad: S.pads[el] }; };
+  M.laneSound = function (id, lane, song) { const S = STYLES[resolve(id)], el = ['kick', 'snare', 'hat', 'fx'][lane], kit = (song && song.kit) || S.kit, j = padIn(S.kit, kit, S.pads[el]); return { kit, pad: j < 0 ? S.pads[el] : j }; };
 
   // Notes for a rhythm set, charted from the style's own drum parts.
   M.chart = function (id, bpm, leadIn, duration, diff, stage) {
@@ -381,14 +426,20 @@
 
   // Set chart: the song's drum parts through its whole form, plus hold notes, HYPE phrases and a
   // finale hit. Every note carries { t, lane, pad, bar } and optionally { dur, hype, finale }.
-  M.chartSet = function (id, bpm, leadIn, bars, diff, stage) {
+  M.chartSet = function (id, bpm, leadIn, bars, diff, stage, song) {
     const S = STYLES[resolve(id)], unit = 60 / bpm / 4, beat = 60 / bpm, lvl = { easy: 0, normal: 1, expert: 2 }[diff] || 0;
-    const rule = { lvl, single: diff !== 'expert', stage }, form = buildForm(bars);
+    const rule = { lvl, single: diff !== 'expert', stage }, form = buildForm(bars), was = M.song;
+    bars = form.length; M.song = song || null;
     let notes = [];
     for (let k = 0; k < bars * 16; k++) {
       const t = leadIn + k * unit + (k % 2 ? S.swing * unit : 0), bar = Math.floor(k / 16);
-      for (const c of chartAt(S, form[bar], k % 16, rule)) notes.push({ t, lane: c.lane, pad: c.hit[3] !== undefined ? c.hit[3] : S.pads[c.el], done: false, bar });
+      for (const c of chartAt(S, form[bar], k % 16, rule)) {
+        if (c.beat) { notes.push({ t, lane: c.lane, kit: song.beat.kit, pad: c.hit[3], done: false, bar }); continue; }
+        const raw = c.hit[3] !== undefined ? c.hit[3] : S.pads[c.el], j = padIn(S.kit, kitOf(S), raw);
+        notes.push({ t, lane: c.lane, pad: j < 0 ? raw : j, done: false, bar });
+      }
     }
+    M.song = was;
     // Hold notes on the FX lane sit where the arrangement thins out, leaving a hand free for the mixer.
     for (const X of form) {
       let h = null; const t0 = leadIn + X.n * 16 * unit;
@@ -453,6 +504,15 @@
       n(layer, inst, midi, t, beats, vel, o) {
         if ((layer === 'bass' && !X.bass) || (layer === 'melody' && X.mel === false)) return;
         o = o || {};
+        if ((X.sec === 'intro' || X.sec === 'mixin') && (ROLE[inst] === 'vocal' || inst === 'brass')) return; // intros are instrumental: no vocal chops, no horns
+        const U = M.song, role = layer === 'bass' ? 'bass' : ROLE[inst] || 'keys';
+        // Tracks open clean: no hook line and no stabs until the verse.
+        if ((X.sec === 'intro' || X.sec === 'mixin') && (role === 'vocal' || inst === 'brass')) return;
+        if (U && U.mutes && U.mutes[role]) return;
+        // Owner feedback (v4): the synthesized voices and brass sounded like cartoon horns. Songs now play those
+        // lines on ordinary instruments unless a song-builder song picks a voice on purpose.
+        if (U && U.swaps && U.swaps[role]) inst = U.swaps[role]; else if (CLEAN[inst]) inst = CLEAN[inst];
+        if (U) midi += U.key || 0;
         Synth.inst(c, L[layer], inst, midi, t, { dur: beats * beat, vel, attack: o.attack, release: o.release, pan: o.pan, detune: o.detune, glide: o.glide,
           send: o.send === undefined ? (layer === 'melody' ? 0.15 : 0) : o.send, sendDest: L.rev, send2: o.echo, send2Dest: L.echo });
       },
@@ -465,28 +525,40 @@
         }
       },
       // extra drum hit outside the 16th grid (rolls, ghost notes)
-      d(pad, t, vel, o) { if (M.mode !== 'bare') Synth.kit(c, L.drums, S.kit, pad, t, Object.assign({ vel }, o)); },
+      d(pad, t, vel, o) { vel *= TOPS_LEVEL; if (M.mode === 'bare' || (X.src || 'style') !== 'style' || (M.song && M.song.mutes && M.song.mutes.drums)) return; const j = padIn(S.kit, kitOf(S), pad); if (j >= 0) Synth.kit(c, L.drums, kitOf(S), j, t, Object.assign({ vel }, o)); },
       pump(t, melody, bass) { if (L.duckable) duck(L, t, melody, bass, beat); },
       // stretch (seconds): play the sample slower or faster so it lasts that long
       fx(name, t, vel, stretch) { const v = Synth.oneShot(c, L.melody, O.assets.fxPath(name), t, vel); if (v && stretch) v.src.playbackRate.value = O.clamp(v.src.buffer.duration / stretch, 0.35, 2); }
     };
   }
 
+  const TOPS_LEVEL = 0.7; // hats, shakers and other tops sit about 6 dB lower than written (owner feedback: too piercing)
   function scheduleStep(c, L, k, t) {
+    if (M.audio) { if (M.onStep) M.onStep(k, t); return; }
     if (M.roll && k >= M.roll.k0 + M.roll.len) k = M.roll.k0 + (k - M.roll.k0) % M.roll.len; // loop roll replays earlier steps
     const S = STYLES[M.style], beat = 60 / M.bpm, step = ((k % 16) + 16) % 16, X = barInfo(M.form, Math.floor(k / 16));
     const spec = S.drums[X.dk] || {}, H = helpers(c, L, beat, X);
-    const charted = M.chartRule ? chartAt(S, X, step, M.chartRule).map(x => x.hit) : [];
-    for (const el of (M.mode === 'bare' ? [] : ELEMENTS)) {
-      for (const h of spec[el] || []) {
-        if (h[0] !== step || (h[4] === 'first' && !X.first)) continue;
-        let v = h[1];
-        if (charted.includes(h)) v *= M.guideLevel;
-        if (el === 'kick' && S.duck && L.duckable) { const w = h[1] > 0.7 ? 1 : 0.6; duck(L, t, S.duck * w, (S.duckBass === undefined ? S.duck : S.duckBass) * w, beat); }
-        if (v > 0.02) Synth.kit(c, L.drums, S.kit, h[3] !== undefined ? h[3] : S.pads[el], t, { vel: v, pan: el === 'perc' ? ((step % 4) - 1.5) * 0.15 : el === 'hat' ? 0.12 : 0 });
+    const chartedNow = M.chartRule ? chartAt(S, X, step, M.chartRule) : [], charted = chartedNow.map(x => x.hit);
+    const U = M.song, noDrums = M.mode === 'bare' || (U && U.mutes && U.mutes.drums), kit = kitOf(S);
+    if (!noDrums && X.src && X.src !== 'style' && X.src !== 'none') { // drums from a beat-pad pattern saved with the song
+      const unit = beat / 4, mine = chartedNow.map(x => x.beat);
+      for (const e of beatEvents(X, step)) {
+        const v = e.velocity * (mine.includes(e) ? M.guideLevel : 1);
+        if (v > 0.02) Synth.kit(c, L.drums, U.beat.kit, e.pad, t + (e.step % 1) * unit, { vel: v, tune: e.tune || 0 });
+        if (S.duck && L.duckable && e.pad === 0) duck(L, t, S.duck, S.duckBass === undefined ? S.duck : S.duckBass, beat);
       }
     }
-    if (M.click && step % 4 === 0) Synth.kit(c, L.drums, S.kit, S.pads.hat, t, { vel: step === 0 ? 0.7 : 0.45 }); // tutorial metronome
+    for (const el of (noDrums || (X.src || 'style') !== 'style' ? [] : ELEMENTS)) {
+      for (const h of spec[el] || []) {
+        if (h[0] !== step || (h[4] === 'first' && !X.first)) continue;
+        let v = h[1] * (el === 'hat' || el === 'ohat' || el === 'perc' ? TOPS_LEVEL : 1);
+        if (charted.includes(h)) v *= M.guideLevel;
+        if (el === 'kick' && S.duck && L.duckable) { const w = h[1] > 0.7 ? 1 : 0.6; duck(L, t, S.duck * w, (S.duckBass === undefined ? S.duck : S.duckBass) * w, beat); }
+        const pad = padIn(S.kit, kit, h[3] !== undefined ? h[3] : S.pads[el]);
+        if (v > 0.02 && pad >= 0) Synth.kit(c, L.drums, kit, pad, t, { vel: v, pan: el === 'perc' ? ((step % 4) - 1.5) * 0.15 : el === 'hat' ? 0.12 : 0 });
+      }
+    }
+    if (M.click && step % 4 === 0) Synth.kit(c, L.drums, S.kit, S.pads.count, t, { vel: step === 0 ? 0.7 : 0.45 }); // tutorial metronome
     if (M.form && step === 0 && M.mode !== 'bare') { // transitions between sections
       if (X.first && (X.sec === 'drop' || X.sec === 'drop2')) H.fx('impact', t, 0.5);
       if (X.dk === 'R1') H.fx('riser', t, 0.5, 8 * beat);
@@ -520,7 +592,7 @@
     }
   }
 
-  /* opts: { style, bpm, origin, mode: 'set'|'jam'|'demo'|'bare', guide (0-1), chartRule, countIn, endAt, click } */
+  /* opts: { style, bpm, origin, mode: 'set'|'jam'|'demo'|'bare', guide (0-1), chartRule, countIn, endAt, click, form, song } */
   M.start = function (opts) {
     M.stop();
     const c = E.ctx; if (!c || !E.nodes) return false;
@@ -532,6 +604,8 @@
     M.endAt = opts.endAt || Infinity;
     M.click = !!opts.click;
     M.form = opts.form ? buildForm(opts.form) : null;
+    M.song = opts.song || null;
+    M.audio = opts.audio || null; // imported audio: play the file instead of a synthesized song
     M.roll = null;
     M.origin = opts.origin !== undefined ? opts.origin : c.currentTime + 0.12;
     M.session = openSession(c, E.nodes);
@@ -541,9 +615,14 @@
     const S = STYLES[M.style];
     if (opts.countIn) {
       const beat = 60 / M.bpm;
-      for (let i = 0; i < 4; i++) { const t = M.origin - (4 - i) * beat; if (t >= c.currentTime) Synth.kit(c, M.session.drums, S.kit, S.pads.count, t, { vel: i === 0 ? 0.95 : 0.7 }); }
+      for (let i = 0; i < 4; i++) { const t = M.origin - (4 - i) * beat; if (t >= c.currentTime) Synth.kit(c, M.session.drums, S.kit, S.pads.count, t, { vel: i === 0 ? 0.6 : 0.45, tune: -5 }); } // a soft, low count-in tick
     }
-    startBed(c, M.session, Math.max(c.currentTime + 0.01, M.origin));
+    if (M.audio) { // beat 1 of the file lands on M.origin
+      const src = c.createBufferSource(), g = c.createGain(), at = M.origin - M.audio.first, t = Math.max(c.currentTime + 0.02, at);
+      src.buffer = M.audio.buffer; g.gain.value = 1.6; src.connect(g); g.connect(M.session.melody);
+      src.start(t, Math.max(0, t - at)); if (M.endAt < Infinity) { g.gain.setValueAtTime(1.6, M.endAt + 0.6); g.gain.linearRampToValueAtTime(0, M.endAt + 2); src.stop(M.endAt + 2.1); }
+      M.session.bed = { src };
+    } else startBed(c, M.session, Math.max(c.currentTime + 0.01, M.origin));
     M.playing = true;
     M.timer = setInterval(pump, 25);
     pump();
@@ -557,7 +636,7 @@
     if (M.session) closeSession(M.session);
     M.session = null;
     const was = M.playing;
-    M.playing = false; M.mode = null; M.chartRule = null; M.click = false; M.roll = null;
+    M.playing = false; M.mode = null; M.chartRule = null; M.click = false; M.roll = null; M.audio = null;
     if (was) O.emit('music', { playing: false });
   };
 
@@ -582,7 +661,8 @@
     const c = new OfflineAudioContext(2, Math.ceil(44100 * seconds), 44100);
     const nodes = E.buildGraph(c);
     nodes.music.gain.value = (opts.musicLevel === undefined ? E.levels.music : opts.musicLevel) * E.SCALE.music;
-    const saved = { style: M.style, bpm: M.bpm, guideLevel: M.guideLevel, mode: M.mode, chartRule: M.chartRule, form: M.form, roll: M.roll };
+    const saved = { style: M.style, bpm: M.bpm, guideLevel: M.guideLevel, mode: M.mode, chartRule: M.chartRule, form: M.form, roll: M.roll, song: M.song };
+    M.song = opts.song || null;
     M.style = resolve(id); M.bpm = bpm; M.guideLevel = opts.guide === undefined ? 1 : opts.guide; M.mode = 'render'; M.chartRule = opts.chartRule || null; M.form = opts.form ? buildForm(opts.form) : null; M.roll = null;
     const L = openSession(c, nodes); L.duckable = !opts.only;
     if (opts.only) for (const k of ['melody', 'bass', 'drums']) if (k !== opts.only) L[k].gain.value = 0;

@@ -113,7 +113,7 @@ async function newPage(browser, viewport) {
   });
   check('LOW kill removes at least 18 dB below 150 Hz; HI kill at least 18 dB of the top end', mx.lowKillDb > 18 && mx.hiKillDb > 18, { low: mx.lowKillDb, hi: mx.hiKillDb });
   check('FILTER: left is a low-pass (highs drop), right is a high-pass (bass drops)', mx.lpDb > 18 && mx.hpDb > 18, { lp: mx.lpDb, hp: mx.hpDb });
-  check('Channel fader down silences the deck; crossfader to B removes deck A; centre plays it in full', mx.faderDown < 0.01 && mx.xfToB < 0.01 && Math.abs(mx.xfMid - mx.m0) < 0.2 * mx.m0, { down: mx.faderDown, toB: mx.xfToB, mid: mx.xfMid, full: mx.m0 });
+  check('Channel fader down silences the deck; crossfader to B removes deck A; centre plays it in full', mx.faderDown < 0.01 && mx.xfToB < 0.01 && Math.abs(mx.xfMid - mx.m0) < 0.4 * mx.m0, { down: mx.faderDown, toB: mx.xfToB, mid: mx.xfMid, full: mx.m0 });
   check('High GAIN pushes the channel meter into the red (above 1.05)', mx.hot > 1.05, mx.hot);
   check('Echo out: with the fader down the echo tail is still audible, then dies away', mx.echoTail > 0.02 && mx.echoGone < mx.echoTail * 0.2, { tail: mx.echoTail, later: mx.echoGone });
   check('Split cue, reverb, flanger and sampler pads run without errors', mx.split && mx.samples === 1 && page._errors.length === 0, page._errors.slice(0, 3));

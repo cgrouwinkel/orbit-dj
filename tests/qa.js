@@ -9,7 +9,7 @@ function check(name, ok, detail) { results.push({ group: current, name, ok: !!ok
 
 async function newPage(browser, opts = {}) {
   const ctx = await browser.newContext({ viewport: opts.viewport || { width: 1366, height: 860 }, hasTouch: !!opts.touch, isMobile: !!opts.touch, acceptDownloads: true });
-  await ctx.addInitScript(seed => { try { if (!sessionStorage.getItem('seeded')) { localStorage.clear(); localStorage.setItem('orbitV2Intro', 'true'); if (!seed.__tutorial) localStorage.setItem('orbitV22Tutorial', 'true'); for (const k in seed) localStorage.setItem(k, seed[k]); sessionStorage.setItem('seeded', '1'); } } catch (e) {} }, opts.seed || {});
+  await ctx.addInitScript(seed => { try { if (!sessionStorage.getItem('seeded')) { localStorage.clear(); localStorage.setItem('orbitV2Intro', 'true'); if (!seed.__tutorial) localStorage.setItem('orbitV22Tutorial', 'true'); if (!seed.__moves) localStorage.setItem('orbitV4Moves', 'false'); if (!seed.__locks) localStorage.setItem('orbitV4UnlockAll', 'true'); for (const k in seed) localStorage.setItem(k, seed[k]); sessionStorage.setItem('seeded', '1'); } } catch (e) {} }, opts.seed || {});
   const page = await ctx.newPage();
   page._errors = [];
   page.on('pageerror', e => page._errors.push('pageerror: ' + e.message));

@@ -11,7 +11,7 @@
 
   const VENUES = [
     { name: 'BEDROOM DJ', song: 'The First Groove', tag: 'Dusty boom bap. Own the backbeat.', bpm: 88, style: 'boombap', teaches: 'Rhythm, downbeats, performance pads' },
-    { name: 'HOUSE PARTY', song: 'Basement Bounce', tag: 'Chipmunk soul. Keep the groove moving.', bpm: 100, style: 'soul', teaches: 'Cue, play/pause, crossfader blends' },
+    { name: 'HOUSE PARTY', song: 'Basement Bounce', tag: 'Soul. Keep the groove moving.', bpm: 100, style: 'soul', teaches: 'Cue, play/pause, crossfader blends' },
     { name: 'UNDERGROUND CLUB', song: 'Neon Pressure', tag: 'Tech house. Catch the syncopation.', bpm: 126, style: 'house', teaches: 'Low EQ and bass swaps' },
     { name: 'MAIN STAGE', song: 'Final Frequency', tag: 'Dubstep. Everything comes together.', bpm: 140, style: 'dubstep', teaches: 'Filter sweeps and the full set' }
   ];
@@ -83,6 +83,7 @@
     difficulty: DIFFS[S.get('orbitV2Difficulty', 'easy')] ? S.get('orbitV2Difficulty', 'easy') : 'easy',
     styleChoice: (v => (v === 'auto' || !v ? 'auto' : window.ORBIT.music.resolve(v)))(S.get('orbitV2Style', 'auto')),
     guideMode: S.get('orbitV2Guide', 'auto'),
+    movesOn: S.get('orbitV4Moves', true) !== false, moves: [], movesDone: 0, pos: { xf: 0.5, eq: 100 / 150, filter: 1 },
     padSound: S.get('orbitV2PadSound', 'drums'),
     chopBank: S.get('orbitV2ChopBank', 'soul'),
     state: 'idle', notes: [], startAt: 0, elapsed: 0, leadIn: 2.7,
@@ -95,19 +96,185 @@
   });
   Object.defineProperty(G, 'DURATION', { get: () => G.duration || G.plannedDuration() });
 
-  G.bpm = () => (G.drill ? 88 : VENUES[G.stage].bpm);
-  G.styleFor = () => (G.drill ? 'boombap' : M.resolve(G.styleChoice === 'auto' ? VENUES[G.stage].style : G.styleChoice));
-  G.plannedDuration = () => { const b = 60 / G.bpm(); return Math.max(2.7, 4 * b + 0.3) + barsFor(G.bpm()) * 4 * b + TAIL; };
+  // Quick Play: G.custom = { id, name, style, bpm, rows (song form), song (music.js song settings) } replaces the venue's song. Nothing is saved to the career.
+  G.custom = null;
+  G.bpm = () => (G.drill ? 88 : G.custom ? G.custom.bpm : VENUES[G.stage].bpm);
+  G.styleFor = () => (G.drill ? 'boombap' : G.custom ? M.resolve(G.custom.style) : M.resolve(G.styleChoice === 'auto' ? VENUES[G.stage].style : G.styleChoice));
+  G.form = () => (G.custom && G.custom.rows ? G.custom.rows : G.custom && G.custom.bars ? G.custom.bars : barsFor(G.bpm()));
+  G.formBars = () => { const f = G.form(); return Array.isArray(f) ? f.reduce((n, r) => n + r.bars, 0) : f; };
+  G.songCfg = () => (G.custom && !G.drill ? G.custom.song || null : null);
+  G.setCustom = function (c) {
+    if (G.state === 'running' || G.state === 'paused') G.stop();
+    G.custom = c || null; G.state = 'idle';
+    O.emit('stage', G.stage); O.emit('game-state', G.state);
+  };
+  G.quickBests = S.get('orbitV4Quick', {}) || {};
+  G.plannedDuration = () => { const b = 60 / G.bpm(); return Math.max(2.7, 4 * b + 0.3) + G.formBars() * 4 * b + TAIL; };
   G.songEnd = () => G.leadIn + G.bars * 240 / G.bpm(); // song time of the finale hit
   const FX = ['impact', 'crowd', 'miss', 'riser'];
   // How loudly the backing plays the drum hits you're supposed to play (timing assist).
   G.guideLevel = () => G.guideMode === 'off' ? 0 : G.guideMode === 'on' ? 0.55 : ({ easy: 0.5, normal: 0.28, expert: 0 })[G.difficulty];
   G.setGuide = function (m) { G.guideMode = m; S.set('orbitV2Guide', m); O.emit('guide', m); };
-  G.controlsFor = st => STAGE_CONTROLS[st === undefined ? G.stage : st];
+  G.controlsFor = st => STAGE_CONTROLS[G.custom && st === undefined ? 3 : st === undefined ? G.stage : st];
+  G.setMoves = function (on) { G.movesOn = !!on; S.set('orbitV4Moves', G.movesOn); O.emit('moves-setting', G.movesOn); };
+
+  // ---------- DJ moves (v4) ----------
+  // Besides tapping notes, sets ask for real mixer moves, timed to the song:
+  //   scratch  - swipe up / down on the FX lane (every venue)
+  //   xf cut   - crossfader to one side, the other, and back (from House Party)
+  //   bass kill - LOW EQ to zero through the last bar of a build, back in on the drop (from Underground Club)
+  //   filter sweep - follow the marker down through a build, open on the drop (Main Stage)
+  // A move: { t, dur, ctrl: 'xf' | 'eq' | 'filter', v0, v1 (slider position 0-1, linear from v0 to v1), label }.
+  const EQ_FLAT = 100 / 150, MOVE_TOL = { easy: 0.2, normal: 0.15, expert: 0.11 }, MOVE_GRACE = 0.3;
+  function makeMoves(form, stage, leadIn, bpm) {
+    const bar = 240 / bpm, at = X => leadIn + X.n * bar, out = [], has = c => STAGE_CONTROLS[stage].includes(c);
+    // after: this move only counts if the one before it in the chain was made (you cannot bring back bass you never killed)
+    const mv = (t, dur, ctrl, v0, v1, label, after) => out.push({ t, dur, ctrl, v0, v1, label, ok: 0, done: false, after: after ? out[out.length - 1] : null });
+    for (const X of form) {
+      const next = form[X.n + 1], intoDrop = X.last && next && (next.sec === 'drop' || next.sec === 'drop2');
+      if (has('xf') && X.sec === 'verse' && X.len >= 4 && X.pos === X.len - 2) { // crossfader cut over the last two bars of a verse
+        mv(at(X), bar * 0.75, 'xf', 0, 0, 'XF ◀ MELODY'); mv(at(X) + bar, bar * 0.75, 'xf', 1, 1, 'XF ▶ BASS'); mv(at(X) + bar * 1.75, bar * 0.25, 'xf', 0.5, 0.5, 'CENTER', true);
+      }
+      if (has('filter') && X.sec === 'build' && X.len >= 4 && X.pos === X.len - 2) { // sweep down through the last two bars of a build
+        mv(at(X), bar * 2, 'filter', 0.95, 0.3, 'FILTER SWEEP ▼'); mv(at(X) + bar * 2, bar * 0.5, 'filter', 1, 1, 'OPEN IT!', true);
+      } else if (has('eq') && intoDrop && X.sec === 'build' && !has('filter')) {
+        mv(at(X), bar, 'eq', 0, 0, 'KILL THE BASS'); mv(at(X) + bar, bar * 0.5, 'eq', EQ_FLAT, EQ_FLAT, 'BASS BACK!', true);
+      }
+      if (has('eq') && intoDrop && X.sec === 'break') { mv(at(X), bar, 'eq', 0, 0, 'KILL THE BASS'); mv(at(X) + bar, bar * 0.5, 'eq', EQ_FLAT, EQ_FLAT, 'BASS BACK!', true); }
+    }
+    return out;
+  }
+  // Turn the FX-lane notes in the second bar of each verse phrase into a scratch run.
+  function addScratches(notes, form, leadIn, bpm, diff) {
+    const unit = 60 / bpm / 4, steps = { easy: [8, 12], normal: [8, 10, 12, 14], expert: [8, 10, 12, 13, 14] }[diff] || [8, 12];
+    for (const X of form) {
+      if (X.sec !== 'verse' || X.pos % 4 !== 1 || X.src !== 'style') continue;
+      const t0 = leadIn + X.n * 16 * unit, a = t0 + 8 * unit, b = t0 + 16 * unit;
+      notes = notes.filter(n => !(n.t > a - unit * 0.6 && n.t < b - 0.01 && (n.lane === 3 || diff === 'easy')) && !(n.dur && n.lane === 3 && n.t + n.dur > a - 0.01 && n.t < b));
+      steps.forEach((st, i) => notes.push({ t: t0 + st * unit, lane: 3, scr: i % 2 ? 'up' : 'down', done: false, bar: X.n }));
+    }
+    return notes.sort((x, y) => x.t - y.t || x.lane - y.lane);
+  }
+  G.moveTarget = (m, now) => m.v0 + (m.v1 - m.v0) * O.clamp((now - m.t) / m.dur, 0, 1);
+  G.activeMove = function (ctrl, now) { // the move for this control that is showing its marker (from two beats before it starts)
+    const lead = 120 / G.bpm();
+    for (const m of G.moves) if (m.ctrl === ctrl && !m.done && now >= m.t - lead && now <= m.t + m.dur) return m;
+    return null;
+  };
+  function movesUpdate(now, dt) {
+    let changed = false;
+    for (const m of G.moves) {
+      if (m.done || now < m.t) continue;
+      if (!m.started) { m.started = true; O.emit('move', { m, type: 'start' }); }
+      const grace = Math.min(MOVE_GRACE, m.dur * 0.4);
+      if (now >= m.t + grace && now <= m.t + m.dur && Math.abs(G.pos[m.ctrl] - G.moveTarget(m, now)) <= MOVE_TOL[G.difficulty]) m.ok += dt;
+      if (now >= m.t + m.dur) {
+        m.done = true; changed = true;
+        m.hit = m.ok / (m.dur - grace) >= 0.55;
+        if (m.after && !m.after.hit) { m.hit = false; m.skipped = true; O.emit('move', { m, type: 'skip' }); continue; }
+        if (m.hit) {
+          G.hits++; G.combo++; G.maxCombo = Math.max(G.maxCombo, G.combo); G.movesDone++;
+          G.score += 300 * G.multiplier() * (G.hypeActive ? 2 : 1); crowdMove(CROWD[G.difficulty].hit * 2);
+          if (STREAKS.includes(G.combo)) O.emit('streak', G.combo);
+        } else { G.misses++; G.counts.miss++; G.combo = 0; crowdMove(-CROWD[G.difficulty].miss); missFx(); }
+        O.emit('move', { m, type: m.hit ? 'hit' : 'miss' });
+      }
+    }
+    return changed;
+  }
+  // ---------- echo battle (v4) ----------
+  // A rival plays a one-bar phrase on the pads; you play it straight back. Eight rounds, phrases get busier.
+  // On Headliner your copy of the phrase is not shown: you play it by ear.
+  const RIVALS = [{ name: 'DJ SOCKS', skill: 0.6 }, { name: 'MC TANGLE', skill: 0.72 }, { name: 'LADY VOLT', skill: 0.82 }, { name: 'THE ARCHITECT', skill: 0.9 }];
+  const PHRASES = [ // [step (16ths), lane]
+    [[0, 0], [4, 1], [8, 0], [12, 1]], [[0, 0], [4, 1], [8, 0], [10, 0], [12, 1]], [[0, 0], [4, 1], [6, 2], [8, 0], [12, 1], [14, 2]],
+    [[0, 0], [3, 0], [4, 1], [8, 0], [10, 2], [12, 1]], [[0, 0], [2, 2], [4, 1], [6, 2], [8, 0], [10, 0], [12, 1], [14, 3]],
+    [[0, 0], [3, 0], [4, 1], [7, 2], [8, 0], [10, 2], [12, 1], [14, 1]], [[0, 0], [2, 2], [4, 1], [6, 0], [8, 3], [10, 0], [11, 0], [12, 1], [14, 2]],
+    [[0, 0], [2, 2], [3, 0], [4, 1], [6, 2], [8, 0], [10, 2], [11, 0], [12, 1], [14, 1], [15, 1]]
+  ];
+  G.RIVALS = RIVALS;
+  G.battle = function (stage) {
+    stage = O.clamp(stage === undefined ? G.stage : stage, 0, 3);
+    const v = VENUES[stage];
+    return { id: 'battle:' + stage, name: 'ECHO BATTLE vs ' + RIVALS[stage].name, style: v.style, bpm: v.bpm, song: { mutes: { drums: true } },
+      rows: [{ sec: 'intro', bars: 2, drums: 'none' }, { sec: 'verse', bars: 8, drums: 'none' }, { sec: 'drop', bars: 8, drums: 'none' }], battle: { stage, rival: RIVALS[stage] } };
+  };
+  function battleNotes(leadIn, bpm, stage, diff) {
+    const unit = 60 / bpm / 4, S = M.STYLES[G.styleFor()], notes = [], skip = stage; // later venues start with busier phrases
+    for (let r = 0; r < 8; r++) {
+      const ph = PHRASES[Math.min(PHRASES.length - 1, Math.floor((r + skip) * 7 / (7 + skip) + skip * 0.6))], bar = 2 + r * 2;
+      for (const [st, lane] of ph) {
+        const snd = M.laneSound(G.styleFor(), lane), off = st % 2 ? S.swing * unit : 0;
+        notes.push({ t: leadIn + (bar * 16 + st) * unit + off, lane, pad: snd.pad, rival: true, done: false, bar, round: r });
+        notes.push({ t: leadIn + ((bar + 1) * 16 + st) * unit + off, lane, pad: snd.pad, done: false, bar: bar + 1, round: r, hidden: diff === 'expert' });
+      }
+    }
+    return notes.sort((a, b) => a.t - b.t || a.lane - b.lane);
+  }
+  // The rival's hits are played by the game: sound on the audio clock, a flash on the lane, points on their side.
+  function rivalUpdate(now) {
+    const B = G.custom && G.custom.battle; if (!B) return false;
+    let changed = false;
+    for (const n of G.notes) {
+      if (n.t > now + 0.06) break;
+      if (!n.rival || n.done) continue;
+      n.done = true; n.hit = true; changed = true;
+      if (E.isRunning()) { const snd = M.laneSound(G.styleFor(), n.lane); Synth.kit(E.ctx, E.nodes.pads, snd.kit, n.pad, G.startAt + n.t, { vel: 0.9 }); }
+      // seeded "performance": the rival's skill is the chance of a perfect, otherwise a good or a miss
+      const roll = ((n.round * 31 + n.lane * 17 + Math.round(n.t * 1000)) % 100) / 100, sk = B.rival.skill;
+      G.rivalScore += roll < sk ? 150 * G.rivalMult() : roll < sk + (1 - sk) * 0.6 ? 65 * G.rivalMult() : 0;
+      G.rivalCombo = roll < sk + (1 - sk) * 0.6 ? G.rivalCombo + 1 : 0;
+      O.emit('rival', { lane: n.lane });
+    }
+    return changed;
+  }
+  G.rivalScore = 0; G.rivalCombo = 0;
+  G.rivalMult = () => Math.min(4, 1 + Math.floor(G.rivalCombo / 8));
+  // Whose turn it is right now: 'rival' | 'you' | '' (intro / outro)
+  G.battleTurn = function (now) {
+    if (!G.custom || !G.custom.battle || G.state !== 'running') return '';
+    const bar = Math.floor((now - G.leadIn) / (240 / G.bpm()));
+    return bar < 2 || bar >= 18 ? '' : bar % 2 === 0 ? 'rival' : 'you';
+  };
+
+  let armed = null;
+  // Scratch: dir 'up' | 'down'. A touch on the FX lane arms the scratch note (timing); the swipe direction completes it.
+  G.scratch = function (dir, perfMs) {
+    if (E.isRunning()) { const v = Synth.oneShot(E.ctx, E.nodes.pads, O.assets.fxPath('scratch'), E.ctx.currentTime + 0.003, 0.7); if (v) v.src.playbackRate.value = dir === 'up' ? 1.35 : 0.85; }
+    if (G.state !== 'running') return null;
+    const now = G.songTime(perfMs), win = DIFFS[G.difficulty].window + 0.03;
+    let best = null, err = Infinity;
+    if (armed && !armed.n.done && now - armed.at < 0.4) { best = armed.n; err = armed.err; }
+    else for (const n of G.notes) { if (n.done || !n.scr) continue; const e = Math.abs(n.t - now); if (e <= win && e < err) { best = n; err = e; } if (n.t - now > win) break; }
+    armed = null;
+    if (!best) return null; // free scratching between notes is allowed
+    if (best.scr !== dir) { G.combo = 0; G.counts.off++; crowdMove(-CROWD[G.difficulty].off); O.emit('judge', { lane: 3, kind: 'off', err: 0 }); O.emit('stats'); return 'off'; }
+    best.done = true; best.hit = true;
+    G.hits++; G.combo++; G.maxCombo = Math.max(G.maxCombo, G.combo);
+    const kind = err < 0.065 ? 'perfect' : err < 0.12 ? 'great' : 'good';
+    G.counts[kind]++;
+    G.score += ({ perfect: 150, great: 100, good: 65 })[kind] * G.multiplier() * (G.hypeActive ? 2 : 1);
+    crowdMove(CROWD[G.difficulty].hit * (G.hypeActive ? 2 : 1));
+    if (STREAKS.includes(G.combo)) O.emit('streak', G.combo);
+    O.emit('judge', { lane: 3, kind, err: 0, scratch: dir }); O.emit('stats');
+    return kind;
+  };
 
   // ---------- note chart (identical patterns to v1) ----------
   // v2.1: notes are charted from the song's own drum parts (see music.js chartAt).
-  function makeNotes(stage, level, leadIn) { return M.chartSet(G.styleFor(), VENUES[stage].bpm, leadIn, barsFor(VENUES[stage].bpm), level, stage); }
+  function makeNotes(stage, level, leadIn) {
+    if (G.custom && G.custom.audio) { G.moves = []; const S0 = M.STYLES[G.styleFor()]; return G.custom.chart(level, leadIn).map(n => Object.assign(n, { pad: S0.pads[['kick', 'snare', 'hat', 'fx'][n.lane]] })); }
+    if (G.custom && G.custom.battle) { G.moves = []; return battleNotes(leadIn, G.bpm(), G.custom.battle.stage, level); }
+    const st = G.custom ? 3 : stage; let notes = M.chartSet(G.styleFor(), G.bpm(), leadIn, G.form(), level, st, G.songCfg());
+    G.moves = [];
+    if (G.movesOn) {
+      const form = M.buildForm(G.form());
+      notes = addScratches(notes, form, leadIn, G.bpm(), level);
+      G.moves = makeMoves(form, st, leadIn, G.bpm());
+      if (level === 'easy') notes = notes.filter(n => !G.moves.some(m => n.t > m.t - 0.05 && n.t < m.t + m.dur - 0.05)); // Rookie: hands free for the mixer
+    }
+    return notes;
+  }
   // v1 charts, kept for reference and tests.
   function makeNotesV1(stage, level, leadIn) {
     const b = 60 / VENUES[stage].bpm, list = [];
@@ -127,6 +294,7 @@
   // ---------- selection ----------
   G.select = function (stage) {
     if (G.state === 'running' || G.state === 'paused') G.stop();
+    G.custom = null;
     G.stage = O.clamp(stage, 0, 3);
     S.set('orbitV2Stage', G.stage);
     G.state = 'idle';
@@ -163,7 +331,8 @@
     G.score = G.combo = G.maxCombo = G.hits = G.misses = 0;
     G.counts = { perfect: 0, great: 0, good: 0, miss: 0, off: 0 };
     dropHolds();
-    G.crowd = 0.5; G.hype = 0; G.hypeActive = false; G.hypeUses = 0; G.holdsDone = 0; G.failed = false;
+    G.crowd = 0.5; G.hype = 0; G.hypeActive = false; G.hypeUses = 0; G.holdsDone = 0; G.failed = false; G.movesDone = 0; armed = null; G.rivalScore = 0; G.rivalCombo = 0;
+    if (G.drill) G.moves = [];
     G.holdsTotal = G.notes.filter(n => n.dur).length;
     G.phrases = {};
     for (const n of G.notes) if (n.hype !== undefined) { const ph = G.phrases[n.hype] || (G.phrases[n.hype] = { total: 0, hit: 0, dead: false }); ph.total++; }
@@ -183,7 +352,7 @@
     M.start(Object.assign({ style: G.setStyleLocked, bpm: G.bpm(), origin: G.startAt + G.leadIn, countIn: true, endAt: G.startAt + G.songEnd() - 0.01 }, music));
     holdScreen();
   }
-  const setMusic = () => ({ mode: 'set', guide: G.guideLevel(), chartRule: chartRule(), form: G.bars });
+  const setMusic = () => (G.custom && G.custom.audio ? { mode: 'set', audio: G.custom.audio } : { mode: 'set', guide: G.guideLevel(), chartRule: chartRule(), form: G.form(), song: G.songCfg() });
   const drillMusic = () => ({ mode: 'bare', click: true });
 
   G.start = async function () {
@@ -194,11 +363,12 @@
     if (!ok) { O.emit('needs-audio', 'start'); return false; }
     O.emit('loading', true);
     G.drill = null;
-    await O.assets.ensure(M.assetsFor(G.styleFor()).concat(FX.map(O.assets.fxPath)), 2500);
+    await O.assets.ensure(M.assetsFor(G.styleFor(), G.songCfg()).concat(FX.map(O.assets.fxPath)), G.custom ? 6000 : 2500);
+    if (G.custom && G.custom.prepare) { try { await G.custom.prepare(); } catch (e) { O.emit('loading', false); O.toast('That imported track could not be loaded.'); return false; } }
     O.emit('loading', false);
     G.stop(true);
     const beat = 60 / G.bpm();
-    G.bars = barsFor(G.bpm());
+    G.bars = G.formBars();
     G.notes = makeNotes(G.stage, G.difficulty, Math.max(2.7, 4 * beat + 0.3));
     resetRun();
     challengeReset();
@@ -301,8 +471,8 @@
     const c = E.ctx, t = c.currentTime + 0.004;
     if (G.padSound === 'chops') Synth.chop(c, E.nodes.pads, G.chopBank, lane, t);
     else {
-      const snd = M.laneSound(G.state === 'running' && G.setStyleLocked ? G.setStyleLocked : G.styleFor(), lane);
-      if (G.state === 'running') { const now = G.songTime(); const n = G.notes.find(x => x.lane === lane && Math.abs(x.t - now) < 0.2); if (n && n.pad !== undefined) snd.pad = n.pad; }
+      const snd = M.laneSound(G.state === 'running' && G.setStyleLocked ? G.setStyleLocked : G.styleFor(), lane, G.songCfg());
+      if (G.state === 'running') { const now = G.songTime(); const n = G.notes.find(x => x.lane === lane && Math.abs(x.t - now) < 0.2); if (n && n.pad !== undefined) { snd.pad = n.pad; if (n.kit) snd.kit = n.kit; } }
       Synth.kit(c, E.nodes.pads, snd.kit, snd.pad, t, { vel: 1 });
     }
   };
@@ -313,12 +483,15 @@
     if (G.state !== 'running') return null;
     const now = G.songTime(perfMs), win = G.drill ? DIFFS.easy.window : DIFFS[G.difficulty].window;
     let best = null, bestErr = Infinity;
+    let arm = null;
     for (const n of G.notes) {
-      if (n.done || n.lane !== lane) continue;
+      if (n.done || n.rival || n.lane !== lane) continue;
       const err = Math.abs(n.t - now);
-      if (err <= win && err < bestErr) { best = n; bestErr = err; }
+      if (n.scr) { if (err <= win + 0.03 && (!arm || err < arm.err)) arm = { n, err, at: now }; }
+      else if (err <= win && err < bestErr) { best = n; bestErr = err; }
       if (n.t - now > win) break;
     }
+    if (!best && arm) { armed = arm; return 'arm'; } // a scratch note: this touch sets the timing, the swipe finishes it
     let kind;
     if (!best) {
       if (now > G.songEnd() + 0.3) return null; // free taps over the outro
@@ -401,7 +574,7 @@
     if (G.drill) return;
     G.crowd = O.clamp(G.crowd + d, G.difficulty === 'easy' ? 0.06 : 0, 1);
   }
-  G.canFail = () => G.difficulty !== 'easy' && !G.drill && !G.noFail; // noFail: test hook only
+  G.canFail = () => G.difficulty !== 'easy' && !G.drill && !G.noFail && !(G.custom && G.custom.battle); // noFail: test hook only
   function missFx() {
     if (G.drill || !E.isRunning()) return;
     const t = E.ctx.currentTime;
@@ -419,10 +592,10 @@
   G.update = function () {
     if (G.state !== 'running') return;
     const now = G.songTime();
-    let changed = false;
+    let changed = rivalUpdate(now);
     for (const n of G.notes) {
       if (n.t > now) break;
-      if (!n.done && now > n.t + MISS_AFTER) {
+      if (!n.done && !n.rival && now > n.t + MISS_AFTER) {
         n.done = true; G.misses++; G.counts.miss++; G.combo = 0; changed = true;
         if (n.hype !== undefined && G.phrases[n.hype]) G.phrases[n.hype].dead = true;
         crowdMove(-CROWD[G.difficulty].miss); missFx();
@@ -430,6 +603,7 @@
       }
     }
     const dt = lastNow === null ? 0 : Math.max(0, now - lastNow); lastNow = now;
+    if (movesUpdate(now, dt)) changed = true;
     holdUpdate(now);
     hypeUpdate(dt);
     if (changed) O.emit('stats');
@@ -460,28 +634,31 @@
     releaseScreen();
     const st = G.stage, diff = G.difficulty, key = st + ':' + diff;
     const total = G.hits + G.misses, accuracy = total ? G.hits / total : 0;
-    const stars = failed ? 0 : accuracy >= 0.92 ? 3 : accuracy >= 0.75 ? 2 : accuracy >= 0.5 ? 1 : 0;
-    const old = G.progress[st] || { score: 0, stars: 0 };
+    const battle = G.custom && G.custom.battle ? { rival: G.custom.battle.rival.name, rivalScore: G.rivalScore, won: G.score > G.rivalScore, stage: G.custom.battle.stage } : null;
+    const stars = failed ? 0 : battle ? (battle.won ? (accuracy >= 0.9 ? 3 : accuracy >= 0.75 ? 2 : 1) : 0) : accuracy >= 0.92 ? 3 : accuracy >= 0.75 ? 2 : accuracy >= 0.5 ? 1 : 0;
+    const custom = G.custom, qk = custom ? custom.id + ':' + diff : '';
+    const old = custom ? G.quickBests[qk] || { score: 0, stars: 0 } : G.progress[st] || { score: 0, stars: 0 };
     const newBest = !failed && G.score > (old.score || 0);
-    if (!failed) {
+    if (custom) { if (!failed) { G.quickBests[qk] = { score: Math.max(old.score || 0, G.score), stars: Math.max(old.stars || 0, stars) }; S.set('orbitV4Quick', G.quickBests); } }
+    else if (!failed) {
       G.progress[st] = { score: Math.max(old.score || 0, G.score), stars: Math.max(old.stars || 0, stars) };
       S.set(KEY_PROGRESS, G.progress);
     }
 
     const ctrl = G.challenge ? G.challenge.points : 0;
-    if (!failed) G.ctrlBests[key] = Math.max(G.ctrlBests[key] || 0, ctrl);
+    if (!failed && !custom) G.ctrlBests[key] = Math.max(G.ctrlBests[key] || 0, ctrl);
     S.set(KEY_CTRL, G.ctrlBests);
     const ctrlGrade = ctrl === 300 ? 'A' : ctrl >= 200 ? 'B' : ctrl >= 100 ? 'C' : 'INCOMPLETE';
 
     const rhythmPts = Math.round(accuracy * 700), equipmentPts = Math.round(ctrl / 300 * 300), combined = rhythmPts + equipmentPts;
     const grade = failed ? 'FAILED' : combined >= 900 ? 'S' : combined >= 750 ? 'A' : combined >= 550 ? 'B' : combined >= 350 ? 'C' : 'PRACTICE';
     const prevCombined = G.combinedBests[key] || 0;
-    if (!failed) G.combinedBests[key] = Math.max(prevCombined, combined);
+    if (!failed && !custom) G.combinedBests[key] = Math.max(prevCombined, combined);
     S.set(KEY_COMBINED, G.combinedBests);
 
-    G.lastResult = { stage: st, difficulty: diff, score: G.score, accuracy, stars, newBest, maxCombo: G.maxCombo, counts: Object.assign({}, G.counts),
-      ctrl, ctrlBest: G.ctrlBests[key] || 0, ctrlGrade, rhythmPts, equipmentPts, combined, grade, newCombinedBest: !failed && combined > prevCombined, cleared: stars > 0,
-      failed, hypeUses: G.hypeUses, holdsDone: G.holdsDone, holdsTotal: G.holdsTotal, crowd: G.crowd, progressPct: failed ? O.clamp((G.songTime() - G.leadIn) / (G.songEnd() - G.leadIn), 0, 1) : 1 };
+    G.lastResult = { custom: custom ? custom.name : '', customId: custom ? custom.id : '', battle, stage: st, difficulty: diff, score: G.score, accuracy, stars, newBest, maxCombo: G.maxCombo, counts: Object.assign({}, G.counts),
+      ctrl, ctrlBest: G.ctrlBests[key] || 0, ctrlGrade, rhythmPts, equipmentPts, combined, grade, newCombinedBest: !failed && !custom && combined > prevCombined, cleared: stars > 0,
+      failed, movesDone: G.movesDone, movesTotal: G.moves.filter(m => !m.skipped).length, hypeUses: G.hypeUses, holdsDone: G.holdsDone, holdsTotal: G.holdsTotal, crowd: G.crowd, progressPct: failed ? O.clamp((G.songTime() - G.leadIn) / (G.songEnd() - G.leadIn), 0, 1) : 1 };
     O.emit('game-state', G.state);
     O.emit('finish', G.lastResult);
   }

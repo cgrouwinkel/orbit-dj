@@ -1,4 +1,4 @@
-# ORBIT DJ — Claude handoff (after v3.1.0, 2026-11-19)
+# ORBIT DJ — Claude handoff (after v4.0.0, 2026-11-19)
 
 ## Source of truth
 - This source bundle (`ORBIT-DJ-v2.1.0-source.zip`) replaces earlier bundles and `ORBIT-Arcade-Final-Prototype.zip`.
@@ -25,6 +25,17 @@ Personal iPhone only (no computer), deploys to Netlify from iPhone via ZIP uploa
 Storage keys: v1 keys kept (`orbitArcadeProgress`, `orbitArcadeTheme` (raw string), `orbitArcadeControllerBestV1`, `orbitArcadeCombinedV11`); new keys are prefixed `orbitV2*`.
 
 Sounds: `python3 tools/make_sounds.py` regenerates `sounds/` and `js/sounds-manifest.js` (deterministic). Build and test: `python3 tools/build.py`, serve `dist/site`, then `node tests/qa.js <url>` (set `PW` to the Playwright module path if needed): 103 checks. `tools/render_previews.js` renders listening previews with the app's own engine.
+
+## v4.0 additions
+- **Song model (music.js):** `M.song` = `{ key, kit, swaps: { bass, keys, lead, vocal }, mutes, beat: { kit, patterns } }`, applied in `helpers.n` (role by instrument via `ROLE`), `scheduleStep` (kit translation `padIn`, beat-pad drums `beatEvents`) and `chartAt` (`beatChart`). `buildForm` accepts rows `{ sec, bars, drums: 'style' | 'A'..'D' | 'none' }`. `M.start({ song, form, audio })`, `M.chartSet(..., song)`, `M.renderOffline(..., { song, form })`. Intros / mix-ins drop vocal and brass notes; `TOPS_LEVEL` scales hats and percussion.
+- **`js/songs.js` (`O.songs`):** saved songs (`orbitV4Songs`), builder UI (`#view-songs`), `SG.custom(song)` (Quick Play entry), `SG.render / exportWav / deckTrack`, `D.library()` (built-in tracks + songs + imports), Quick Play overlay (`#ov-quick`).
+- **Game (game.js):** `G.custom` (Quick Play context; `G.setCustom`, `G.form()`, `G.songCfg()`, bests in `orbitV4Quick`), DJ moves (`G.moves`, `makeMoves`, `movesUpdate`, `G.pos`, `G.activeMove`, `G.moveTarget`, setting `orbitV4Moves`), scratches (`addScratches`, `G.scratch(dir)`; a tap on a scratch note arms it), echo battle (`G.battle(stage)`, `battleNotes`, `rivalUpdate`, `G.battleTurn`).
+- **`js/night.js` (`O.night`):** Club Night as `SC.active.kind === 'night'`; `N.start`, `N.tick`, requests, `transition()`, result via the `gig-result` event (`r.night`, `r.rows`).
+- **Beat challenges (school.js):** `SC.BEAT_CHALLENGES`, `startChallenge / listenChallenge / checkChallenge / stopChallenge`, progress in `SC.progress.challenges`.
+- **Career (ui.js):** `CAREER` node table, `nodeInfo`, `venueOpen` (4 stars), `RANKS`, `SKINS` (`orbitV4Skin`), `checkRewards` (`orbitV4Rewards`), `orbitV4UnlockAll`.
+- **`js/imports.js` (`O.imports`):** IndexedDB `orbit-dj/imports`, `IM.analyse(buf)` (band envelopes at 100 Hz, comb-filter tempo search, downbeat by low-end energy), `IM.chart`, `IM.fix`, deck entries (`T.imported`, `T.first`), Quick Play entries with `audio` (played by `M.start({ audio })`).
+- **Tests:** `tests/qa-v4.js`. Legacy suites run with DJ moves off and everything unlocked (`orbitV4Moves`, `orbitV4UnlockAll` seeds). Do not run suites concurrently: CPU starvation makes the scripted players miss notes.
+- **Render loop:** `loop()` only re-arms `requestAnimationFrame` if `wake()` has not already done so in that frame.
 
 ## v3.1 changes (sound library and songs)
 - `tools/make_sounds.py` regenerates the whole library at 44.1 kHz (it deletes `sounds/kits` and `sounds/inst` first). New building blocks: `svf` (state-variable filter), `saw_ph`, `room`, `sp` (early-sampler grit), `ott` (multiband upward compression), `sing` (formant voice with formant tuning and `balance()`), `growl(kind)`. Instruments are listed in `INSTRUMENTS` (builder, MIDI roots, output rate).

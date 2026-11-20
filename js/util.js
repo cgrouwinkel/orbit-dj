@@ -2,7 +2,7 @@
 (function () {
   'use strict';
   const O = (window.ORBIT = window.ORBIT || {});
-  O.VERSION = '3.1.0';
+  O.VERSION = '4.0.0';
 
   O.$ = (s, root) => (root || document).querySelector(s);
   O.$$ = (s, root) => Array.from((root || document).querySelectorAll(s));

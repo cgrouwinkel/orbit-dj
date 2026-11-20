@@ -14,15 +14,19 @@ const TRACKS = [ // keys are chosen so the gig pairs land in key once the tempos
   { id: 'bounce', style: 'soul', bpm: 94, title: 'Basement Bounce', key: 'D-flat major', form: 'deck48' }
 ];
 (async () => {
-  const tmp = fs.mkdtempSync('/tmp/orbit-tracks-'); fs.rmSync(path.join(ROOT, 'tracks'), { recursive: true, force: true }); fs.mkdirSync(path.join(ROOT, 'tracks'), { recursive: true });
+  const tmp = fs.mkdtempSync('/tmp/orbit-tracks-'); const ONLY = process.env.ONLY ? process.env.ONLY.split(',') : null; // ONLY=final,glass re-renders just those tracks
+  if (!ONLY) fs.rmSync(path.join(ROOT, 'tracks'), { recursive: true, force: true });
+  fs.mkdirSync(path.join(ROOT, 'tracks'), { recursive: true });
   const b = await chromium.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', args: ['--autoplay-policy=no-user-gesture-required'] });
   const ctx = await b.newContext({ acceptDownloads: true }); const p = await ctx.newPage();
   p.on('pageerror', e => console.log('PAGEERROR', e.message));
   await p.addInitScript(() => { try { localStorage.setItem('orbitV2Intro', 'true'); localStorage.setItem('orbitV22Tutorial', 'true'); } catch (e) {} });
   await p.goto(BASE + '/index.html'); await p.waitForTimeout(300);
   await p.evaluate(async () => { ORBIT.engine.unlock(); await ORBIT.engine.ensureRunning(); });
-  const manifest = [];
+  const manifest = [], mf = path.join(ROOT, 'js', 'tracks-manifest.js');
+  const old = ONLY && fs.existsSync(mf) ? JSON.parse(fs.readFileSync(mf, 'utf8').match(/window\.ORBIT_TRACKS = (.*);/)[1]) : [];
   for (const T of TRACKS) {
+    if (ONLY && !ONLY.includes(T.id)) { const keep = old.find(t => t.id === T.id); if (keep) manifest.push(keep); continue; }
     const [dl, meta] = await Promise.all([p.waitForEvent('download', { timeout: 300000 }), p.evaluate(async T => {
       const M = ORBIT.music, form = M.buildForm(T.form), bars = form.length, secs = bars * 240 / T.bpm;
       await ORBIT.assets.ensure(M.assetsFor(T.style));

@@ -44,6 +44,7 @@
   <header class="topbar">
     <button class="brand" data-view="career" aria-label="ORBIT DJ career map"><span class="logo">ORBIT</span><span class="logo-tag">DJ</span></button>
     <div class="nowplaying" aria-live="polite"><span class="np-venue" id="np-venue">VENUE 01 · BEDROOM DJ</span><span class="np-song" id="np-song">The First Groove</span></div>
+    <div class="seg studio-switch" id="studio-switch" role="tablist" aria-label="Studio"><button data-studio="pads">BEAT PAD</button><button data-studio="songs">SONG BUILDER</button></div>
     <div class="hud" aria-label="Score">
       <div class="hud-score"><small>SCORE</small><b id="hud-score">000000</b></div>
       <div class="hud-cell hud-combo"><small>COMBO</small><b id="hud-combo">0</b><em id="hud-mult">×1</em></div>
@@ -53,7 +54,7 @@
     <nav class="tabs" role="tablist" aria-label="Sections">
       <button class="tab is-active" role="tab" aria-selected="true" data-view="play"><svg><use href="#i-play"/></svg><span>Play</span></button>
       <button class="tab" role="tab" aria-selected="false" data-view="mix"><svg><use href="#i-decks"/></svg><span>Mix</span></button>
-      <button class="tab" role="tab" aria-selected="false" data-view="pads"><svg><use href="#i-pads"/></svg><span>Beats</span></button>
+      <button class="tab" role="tab" aria-selected="false" data-view="pads"><svg><use href="#i-pads"/></svg><span>Studio</span></button>
       <button class="tab" role="tab" aria-selected="false" data-view="career"><svg><use href="#i-star"/></svg><span>Career</span></button>
       <button class="tab" role="tab" aria-selected="false" data-view="settings"><svg><use href="#i-sliders"/></svg><span>Setup</span></button>
     </nav>
@@ -89,6 +90,53 @@
       </div>
     </section>
 
+    <!-- STUDIO: song builder -->
+    <section class="view view-songs" id="view-songs" aria-label="Song builder">
+      <div class="sg-col sg-side">
+        <div class="eyebrow">MY SONGS</div>
+        <div class="sg-list" id="sg-list"></div>
+        <button class="btn" id="sg-new">+ NEW SONG</button>
+      </div>
+      <div class="sg-empty" id="sg-empty">
+        <h2 class="display">BUILD A SONG</h2>
+        <p class="note">Start from a genre, then change the tempo, key, sounds and arrangement. Your songs play in the game, load onto the decks and export as WAV.</p>
+        <div class="sg-starters" id="sg-starters"></div>
+      </div>
+      <div class="sg-editor" id="sg-editor" hidden>
+        <div class="sg-col sg-settings">
+          <label class="field"><span class="field-label">NAME</span><input class="select" id="sg-name" maxlength="40" autocomplete="off"></label>
+          <div class="sg-two">
+            <label class="field"><span class="field-label">GENRE</span><select class="select" id="sg-style"></select></label>
+            <label class="field"><span class="field-label">KEY</span><select class="select" id="sg-key"></select></label>
+          </div>
+          <label class="field"><span class="field-label">TEMPO · <b id="sg-tempo-val"></b></span><input type="range" id="sg-tempo" step="1"></label>
+          <div class="sg-two">
+            <label class="field"><span class="field-label">DRUM KIT</span><select class="select" id="sg-kit"></select></label>
+            <label class="field"><span class="field-label">BASS</span><select class="select" id="sg-bass"></select></label>
+            <label class="field"><span class="field-label">CHORDS</span><select class="select" id="sg-keys"></select></label>
+            <label class="field"><span class="field-label">LEAD</span><select class="select" id="sg-lead"></select></label>
+            <label class="field"><span class="field-label">HOOK</span><select class="select" id="sg-vocal"></select></label>
+          </div>
+          <div class="field"><span class="field-label">PARTS (TAP TO MUTE)</span>
+            <div class="sg-mutes" id="sg-mutes"><button class="btn btn-small" data-part="drums">DRUMS</button><button class="btn btn-small" data-part="bass">BASS</button><button class="btn btn-small" data-part="keys">CHORDS</button><button class="btn btn-small" data-part="lead">LEAD</button><button class="btn btn-small" data-part="vocal">HOOK</button></div>
+          </div>
+        </div>
+        <div class="sg-col sg-arr">
+          <div class="sg-head"><span class="eyebrow">ARRANGEMENT</span><b id="sg-total"></b></div>
+          <div class="sg-rows" id="sg-rows"></div>
+          <div class="btn-row"><button class="btn btn-small" id="sg-add">+ SECTION</button><button class="btn btn-small" id="sg-usebeat">USE MY BEAT</button></div>
+          <p class="note" id="sg-beat-note"></p>
+          <div class="sg-actions">
+            <button class="btn" id="sg-preview"><svg><use href="#i-play"/></svg><span>PREVIEW</span></button>
+            <button class="btn is-on" id="sg-play">PLAY IT</button>
+            <button class="btn" id="sg-deck0">DECK A</button><button class="btn" id="sg-deck1">DECK B</button>
+            <button class="btn" id="sg-wav">EXPORT WAV</button>
+            <button class="btn" id="sg-del">DELETE</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- PLAY -->
     <section class="view view-play is-active" id="view-play" aria-label="Play">
       <aside class="deck deck-left" aria-label="Transport">
@@ -104,11 +152,14 @@
             <button role="radio" data-diff="easy">ROOKIE</button><button role="radio" data-diff="normal">CLUB</button><button role="radio" data-diff="expert">HEAD&shy;LINER</button>
           </div>
         </div>
-        <label class="field field-inline only-roomy"><span class="field-label">BACKING</span>
+<div class="field quick-field"><span class="field-label">SONG</span>
+          <div class="btn-row"><button class="btn" data-open-quick id="quick-open"><span id="quick-name">VENUE SONG</span></button><button class="btn" id="quick-exit" hidden aria-label="Back to the venue song"><svg><use href="#i-x"/></svg></button></div>
+        </div>
+        <span hidden>        <label><span class="field-label">BACKING</span>
           <select id="style-select" class="select">
-            <option value="auto">Match venue</option><option value="boombap">Dusty boom bap</option><option value="soul">Chipmunk soul</option><option value="trap">Trap</option><option value="house">Tech house</option><option value="basshouse">Bass house</option><option value="garage">UK garage</option><option value="dubstep">Dubstep</option>
+            <option value="auto">Match venue</option><option value="boombap">Dusty boom bap</option><option value="soul">Soul</option><option value="trap">Trap</option><option value="house">Tech house</option><option value="basshouse">Bass house</option><option value="garage">UK garage</option><option value="dubstep">Dubstep</option>
           </select>
-        </label>
+        </label></span>
         <div class="mini-mix only-roomy">
           <label class="mini-fader"><span>MUSIC</span><input type="range" min="0" max="100" data-level="music" aria-label="Music level"><output data-level-out="music"></output></label>
           <label class="mini-fader"><span>PADS</span><input type="range" min="0" max="100" data-level="pads" aria-label="Pad level"><output data-level-out="pads"></output></label>
@@ -126,6 +177,7 @@
           <div class="judgment" id="judgment" aria-hidden="true"><b></b><small></small></div>
           <div class="stage-msg" id="stage-msg"></div>
           <div class="callout" id="callout" aria-hidden="true"></div>
+          <div class="battle-score" id="battle-score" aria-live="off"></div>
           <button class="hype-btn" id="btn-hype" aria-label="HYPE meter"><b>HYPE</b><small>0%</small></button>
           <div class="coach" id="coach" role="status" aria-live="polite" hidden>
             <div class="coach-main"><b id="coach-step"></b><span id="coach-text"></span></div>
@@ -205,6 +257,9 @@
           <p class="note">Short lessons that check what you actually do on the pads.</p>
           <div class="lesson-list" id="beat-lessons"></div>
           <button class="btn btn-small" id="beat-quit" hidden>QUIT LESSON</button>
+          <p class="note">Challenges: hear a beat, then rebuild it by ear. Your own pattern comes back when you quit.</p>
+          <div class="lesson-list" id="beat-challenges"></div>
+          <div class="btn-row" id="ch-actions" hidden><button class="btn btn-small" id="ch-listen">LISTEN</button><button class="btn btn-small is-on" id="ch-check">CHECK</button><button class="btn btn-small" id="ch-quit">QUIT</button></div>
         </div>
         <div class="mpc-panel" data-bppanel="steps">
           <div class="panel-row">
@@ -257,7 +312,7 @@
     <!-- CAREER -->
     <section class="view view-career scroll" id="view-career" aria-label="Career">
       <div class="career-head">
-        <div><div class="eyebrow">THE ROAD TO THE MAIN STAGE</div><h1 class="display">CAREER</h1></div>
+        <div><div class="eyebrow">THE ROAD TO THE MAIN STAGE</div><h1 class="display">CAREER</h1><div class="car-rank" id="car-rank"></div></div>
         <div class="totals">
           <div><b id="tot-stars">0</b><small>STARS</small></div>
           <div><b id="tot-best">0</b><small>PERSONAL BEST</small></div>
@@ -303,8 +358,17 @@
             <div class="seg" id="seg-speed" role="radiogroup" aria-label="Note speed"><button role="radio" data-speed="2.8">RELAXED</button><button role="radio" data-speed="2.2">NORMAL</button><button role="radio" data-speed="1.7">FAST</button></div>
           </div>
           <label class="field"><span class="field-label">BACKING TRACK</span>
-            <select id="set-style" class="select"><option value="auto">Match venue</option><option value="boombap">Dusty boom bap</option><option value="soul">Chipmunk soul</option><option value="trap">Trap</option><option value="house">Tech house</option><option value="basshouse">Bass house</option><option value="garage">UK garage</option><option value="dubstep">Dubstep</option></select>
+            <select id="set-style" class="select"><option value="auto">Match venue</option><option value="boombap">Dusty boom bap</option><option value="soul">Soul</option><option value="trap">Trap</option><option value="house">Tech house</option><option value="basshouse">Bass house</option><option value="garage">UK garage</option><option value="dubstep">Dubstep</option></select>
           </label>
+          <div class="field"><span class="field-label">HIGHWAY SKIN (EARNED WITH CAREER STARS)</span>
+            <div class="seg" id="seg-skin" role="radiogroup" aria-label="Highway skin"></div>
+          </div>
+          <div class="field"><span class="field-label">CAREER LOCKS</span>
+            <div class="seg" id="seg-unlock" role="radiogroup" aria-label="Career locks"><button role="radio" data-unlock="off">EARN UNLOCKS</button><button role="radio" data-unlock="on">EVERYTHING OPEN</button></div>
+          </div>
+          <div class="field"><span class="field-label">DJ MOVES (SCRATCHES, FADER AND EQ MOVES IN SETS)</span>
+            <div class="seg" id="seg-moves" role="radiogroup" aria-label="DJ moves"><button role="radio" data-moves="on">ON</button><button role="radio" data-moves="off">OFF (TAPS ONLY)</button></div>
+          </div>
           <div class="field"><span class="field-label">GUIDE DRUMS (TIMING HELP)</span>
             <div class="seg" id="seg-guide" role="radiogroup" aria-label="Guide drums"><button role="radio" data-guide="auto">AUTO</button><button role="radio" data-guide="on">ALWAYS</button><button role="radio" data-guide="off">OFF</button></div>
           </div>
@@ -421,12 +485,26 @@
     </div>
   </div>
 
+  <div class="overlay" id="ov-quick" role="dialog" aria-modal="true" aria-labelledby="quick-title" hidden>
+    <div class="sheet sheet-school">
+      <h2 class="display" id="quick-title">QUICK PLAY</h2>
+      <div class="seg" id="quick-diff" role="radiogroup" aria-label="Difficulty"><button role="radio" data-diff="easy">ROOKIE</button><button role="radio" data-diff="normal">CLUB</button><button role="radio" data-diff="expert">HEADLINER</button></div>
+      <div class="school-cols">
+        <div><div class="eyebrow">ORBIT SONGS</div><div class="track-list" id="quick-built"></div></div>
+        <div><div class="eyebrow">MY MUSIC</div><div class="track-list" id="quick-mine"></div></div>
+      </div>
+      <p class="note">Any song at any difficulty. Quick Play keeps its own best scores and does not change your career.</p>
+      <div class="sheet-actions"><button class="btn" data-import>IMPORT AUDIO</button><button class="btn" id="quick-studio">BUILD A SONG</button><button class="btn" data-close>Close</button></div>
+    </div>
+  </div>
+
   <div class="overlay" id="ov-tracks" role="dialog" aria-modal="true" aria-labelledby="tracks-title" hidden>
     <div class="sheet">
       <h2 class="display" id="tracks-title">LOAD A TRACK</h2>
       <p class="note">Tracks within about 10% of each other’s tempo can be beatmatched.</p>
       <div class="track-list" id="track-list"></div>
-      <div class="sheet-actions"><button class="btn" data-close>Cancel</button></div>
+      <p class="note">Import your own audio (MP3, M4A, WAV). Files stay on this device.</p>
+      <div class="sheet-actions"><button class="btn" data-import>IMPORT AUDIO</button><button class="btn" data-close>Cancel</button></div>
     </div>
   </div>
 
@@ -477,5 +555,8 @@
 <script src="js/school.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/mixui.js"></script>
+<script src="js/songs.js"></script>
+<script src="js/night.js"></script>
+<script src="js/imports.js"></script>
 </body>
 </html>

@@ -161,9 +161,10 @@ def clap(dur=0.45, lo=800, hi=12000, tail=0.11, seed=3, bursts=(0, 0.009, 0.019,
     for k, b in enumerate(bursts):
         i = int(b * SR); e[i:] += fit(env(dur - b, 0.005 if k < len(bursts) - 1 else tail, 0.0004), len(e) - i)
     return trim(sat(n * e * 2.2, 1.4))
-def hat(decay=0.035, dur=0.4, lo=7500, metallic=0.5, seed=4, tone=1.0):
+def hat(decay=0.035, dur=0.4, lo=7500, metallic=0.5, seed=4, tone=1.0, top=9500):
+    # v4: owner found the hats too high and piercing, so they are pitched lower and rolled off above `top`
     x = metal(dur, mult=tone) * metallic + noise(dur, seed) * (1 - metallic)
-    return trim(hp(x, lo, 4) * env(dur, decay, 0.0003))
+    return trim(lp(hp(x, lo, 4), top, 2) * env(dur, decay, 0.0003))
 def tom(f0, f1, decay=0.3, dur=0.7, seed=5, noise_amt=0.15):
     b = np.sin(sweep_phase(dur, f0, f1, 0.06)) * env(dur, decay, 0.001)
     n = lp(noise(0.05, seed), 5000) * env(0.05, 0.01) * noise_amt
@@ -173,9 +174,9 @@ def rim(dur=0.12):
     x += hp(noise(dur, 6), 2500) * env(dur, 0.004) * 0.8
     return trim(hp(sat(x, 2.0), 300))
 def shaker(dur=0.16, seed=7):
-    return trim(bp(noise(dur, seed), 5000, 16000, 2) * env(dur, 0.035, 0.008))
+    return trim(bp(noise(dur, seed), 3500, 9000, 2) * env(dur, 0.035, 0.008))
 def tamb(dur=0.3, seed=8):
-    t = T(dur); j = hp(metal(dur, mult=6.3) * 0.5 + noise(dur, seed) * 0.5, 6500, 4)
+    t = T(dur); j = lp(hp(metal(dur, mult=4.6) * 0.5 + noise(dur, seed) * 0.5, 4500, 4), 10000, 2)
     e = env(dur, 0.06, 0.002); i = int(0.035 * SR); e[i:] += fit(env(dur, 0.09, 0.002), len(e) - i) * 0.8
     return trim(j * e)
 def conga(f, decay=0.18, dur=0.4):
@@ -269,8 +270,8 @@ def growl(kind, f, dur=0.7):
 # ---------------------------------------------------------------- keys, synths, orchestral
 def fm_ep(f, dur=2.6, vel=1.0):
     t = T(dur)
-    idx1 = 2.8 * vel * np.exp(-t / 0.45) + 0.5
-    tine = 0.55 * vel * np.sin(2 * np.pi * f * t + 1.8 * np.exp(-t / 0.05) * np.sin(2 * np.pi * 14 * f * t)) * np.exp(-t / 0.18)
+    idx1 = 1.7 * vel * np.exp(-t / 0.45) + 0.3  # a higher index sounds brassy and honky
+    tine = 0.45 * vel * np.sin(2 * np.pi * f * t + 1.8 * np.exp(-t / 0.05) * np.sin(2 * np.pi * 14 * f * t)) * np.exp(-t / 0.18)
     body = np.sin(2 * np.pi * f * t + idx1 * np.sin(2 * np.pi * f * t))
     x = (body + tine + 0.12 * np.sin(4 * np.pi * f * t)) * env(dur, 1.0 + 110 / f, 0.002)
     return fade(lp(sat(x * 0.9, 1.6), 11000), 40)
@@ -420,8 +421,8 @@ KITS = {
   'dusty': [  # boom bap / soul: punchy and crunchy through an early-sampler stage, not filtered dark
     ('kick', lambda: sp(kick(55, 150, 0.05, 0.05, 0.16, 0.35, 0.5, 2.6)), -8),
     ('snare', lambda: sp(room(mix(snare(180, 260, 0.9, 0.07, 0.12, 900, 12000, 1.0, 2.2), clap(0.3, 900, 9000, 0.07, 15) * 0.4), 60, 0.22)), -9),
-    ('hat', lambda: sp(hat(0.04, lo=5500, metallic=0.35)), -15),
-    ('open hat', lambda: sp(hat(0.22, 0.6, 5500, 0.4, 16)), -16),
+    ('hat', lambda: hat(0.04, lo=3800, metallic=0.3, tone=0.7, top=8500), -18),
+    ('open hat', lambda: hat(0.2, 0.6, 3800, 0.35, 16, 0.7, 8500), -19),
     ('kick 2', lambda: sp(kick(46, 110, 0.06, 0.08, 0.3, 0.2, 0.3, 2.2, 0.9)), -8),
     ('rim', lambda: sp(rim()), -13),
     ('clap', lambda: sp(room(clap(0.4, 800, 10000, 0.1, 17), 50, 0.2)), -11),
@@ -438,8 +439,8 @@ KITS = {
   'club': [  # house / garage: tight, bright, loud
     ('kick', lambda: kick(50, 260, 0.028, 0.035, 0.13, 0.55, 0.3, 2.2, 0.5), -7),
     ('clap', lambda: room(clap(), 45, 0.18), -10),
-    ('hat', lambda: hat(0.03, lo=8000, metallic=0.45, seed=17), -17),
-    ('open hat', lambda: hat(0.2, 0.5, 7000, 0.5, 18), -16.5),
+    ('hat', lambda: hat(0.03, lo=5000, metallic=0.4, seed=17, tone=0.75), -19),
+    ('open hat', lambda: hat(0.18, 0.5, 4800, 0.45, 18, 0.75), -19),
     ('kick 2', lambda: kick(46, 190, 0.04, 0.05, 0.2, 0.35, 0.2, 1.8, 0.7), -8),
     ('snare', lambda: snare(230, 350, 0.8, 0.04, 0.07, 2000, 14000, 1.0, 1.8, 0.35, 19), -10),
     ('rim', lambda: rim(), -13),
@@ -456,12 +457,12 @@ KITS = {
   'midnight': [  # trap and dubstep
     ('808 kick', lambda: mix(bass_808(mtof(31), 1.3, 3.2, 0.5, 0.5), kick(55, 300, 0.02, 0.02, 0.08, 0.6, 0.3, 2.4, 0.3) * 0.5), -7),
     ('snare', lambda: snare(210, 330, 0.6, 0.05, 0.11, 1800, 16000, 1.2, 2.2, 0.45, 22), -9),
-    ('hat', lambda: hat(0.022, lo=8500, metallic=0.6, seed=23), -17),
-    ('open hat', lambda: hat(0.26, 0.6, 8000, 0.6, 24), -17),
+    ('hat', lambda: hat(0.022, lo=5500, metallic=0.5, seed=23, tone=0.8), -19),
+    ('open hat', lambda: hat(0.22, 0.6, 5200, 0.5, 24, 0.8), -19.5),
     ('punch kick', lambda: kick(55, 320, 0.022, 0.03, 0.12, 0.7, 0.4, 3.0, 0.45), -7),
     ('clap', lambda: room(clap(0.5, 900, 12000, 0.14, 25, (0, 0.008, 0.017, 0.027, 0.036)), 60, 0.2), -10),
     ('snap', lambda: clap(0.25, 1800, 9000, 0.05, 26, (0, 0.005)), -13),
-    ('perc', lambda: trim(bp(metal(0.2, mult=2.3), 2000, 12000) * env(0.2, 0.03)), -15),
+    ('perc', lambda: trim(bp(metal(0.2, mult=1.6), 1200, 7000) * env(0.2, 0.03)), -17),
     ('big snare', lambda: room(mix(snare(195, 240, 1.2, 0.09, 0.2, 800, 14000, 1.0, 2.5, 0.7, 27), clap(0.5, 900, 12000, 0.16, 28) * 0.5), 110, 0.28), -8),
     ('808 tom', lambda: tom(130, 80, 0.45, 0.9, 27, 0.05), -10),
     ('impact', lambda: impact(), -10),

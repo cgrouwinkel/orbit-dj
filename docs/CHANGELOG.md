@@ -1,5 +1,42 @@
 # ORBIT DJ — Changelog
 
+## v4.0.0 — 2026-11-19 (deeper gameplay, career map, Studio song builder, your own music)
+
+### Gameplay
+- **DJ moves on the highway.** Sets now ask for real mixer moves, timed to the song, shown as a band across the highway and a marker on the control:
+  - Scratches (every venue): swipe up / down on the FX lane or its pad; arrows on the gem show the direction. Keyboard: arrow keys.
+  - Crossfader cuts (from House Party), bass kill into the drop (from Underground Club), filter sweep through the build (Main Stage).
+  - A "bring it back" move only counts if you made the move before it. Setup → DJ MOVES → OFF returns to taps only.
+- **Echo battle.** A rival plays a one-bar phrase on the pads and you play it straight back, eight rounds, against the rival's score. On Headliner your copy is hidden: you play it by ear.
+- **Club Night (Mix tab).** You choose the tracks. Three mixes in a row; the crowd makes a request before each one (harder, more bass, keep the groove, faster, switch it up) and its energy moves with your track choice and the quality of the mix.
+- **Beat challenges (Studio → beat pad → TRAIN).** Hear a beat, rebuild it by ear on the step grid, CHECK scores the copy. Your own pattern comes back when you quit.
+- **Career map.** Every venue is now a chapter of level types: set, echo battle, beat challenge, mix gigs and (Main Stage) Club Night; 18 levels, 54 stars. A venue opens with 4 stars from the one before. Stars also earn ranks and highway skins (Vinyl, Neon, Gold). Setup → CAREER LOCKS → EVERYTHING OPEN removes the gating.
+
+### Music freedom
+- **Studio → SONG BUILDER.** Start from any of the seven songs and change tempo, key, drum kit, bass / chords / lead / vocal sounds, mute parts, and build your own arrangement (section, length and drums per row). USE MY BEAT puts your beat-pad patterns in as the drums. Songs are saved on the device.
+- **Your songs everywhere:** PLAY IT (rhythm set charted from your song, including your own beat), DECK A / DECK B (rendered in the browser with a mix-in and mix-out), EXPORT WAV.
+- **Quick Play.** Any song at any difficulty from the Play tab: the seven ORBIT songs, your songs, your imported audio and the echo battles. Separate best scores; the career is untouched.
+- **Import your own audio.** MP3, M4A or WAV from your phone (track list or Quick Play → IMPORT AUDIO). Files stay on the device. Tempo and beat 1 are detected so the track can be beatmatched on the decks, and its drum hits are charted for Quick Play. Half / double tempo, MOVE BEAT 1 and DELETE fix a wrong grid.
+
+### Sound (owner feedback: "cartoon character style horns" and hi-hats that are too high)
+- **No more cartoon horns.** The synthesized voices (vocal chops, chipmunk voices, choir) and the brass stabs are gone from all seven songs. Their lines are played on ordinary instruments instead: pluck synth, vibes, strings and piano. "Chipmunk soul" is now just "Soul". A song-builder song can still choose a voice for its hook on purpose (HOOK menu).
+- **Tracks open clean.** Intros have no hook line and no stabs, and only a kick and one soft hat until the verse.
+- **Hi-hats are lower and quieter.** Hats, shakers, tambourine and the metallic percussion were re-made at a lower pitch with the top rolled off (closed-hat centre of energy moved from about 15 kHz to about 8 kHz) and play about 6 dB quieter in every song.
+- The electric piano is less honky; the count-in and tutorial metronome are a soft low tick instead of a hat.
+- Deck tracks re-rendered with these changes.
+
+### Fixes
+- Free play, the beat-pad backing and the equipment demos had lost their drums (a side effect of the song-builder work, caught by the brightness check). Fixed.
+- Loading any track onto a deck had stopped working (one line was accidentally commented out). Fixed.
+- Club Night: after a mix the new live track now eases back to its own tempo. Before, a chain of synced mixes kept everything at the first track's tempo and could leave no track in range.
+- Imported audio: a detected tempo within 0.12 BPM of a whole number snaps to it.
+- The screen could end up drawing several times per frame after certain events mid-set (duplicate animation loops), which cost performance. Fixed.
+
+### Not yet verified
+- No iPhone or Safari testing of any of this. Most at risk on a real phone: scratch swipes on the FX lane, moving a slider with one hand while tapping with the other, rendering a song for the decks (about half a minute on a fast computer; expect longer on a phone), and the file picker / IndexedDB storage for imports.
+- Tempo detection was tested on ORBIT's own music only. Real songs with loose or changing tempo will need the grid fixes, and some will not beatmatch well.
+- Nobody has listened to the changed sounds yet. If the horn-like sound you meant is something else, tell me which song and roughly when it plays.
+
 ## v3.1.0 — 2026-11-19 (new sound library and seven rewritten songs)
 
 ### Why

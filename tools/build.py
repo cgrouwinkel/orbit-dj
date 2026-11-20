@@ -11,7 +11,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DIST = os.path.join(ROOT, 'dist')
 SITE_FILES = ['index.html', 'manifest.webmanifest', 'sw.js', 'README.txt']
 SITE_DIRS = ['css', 'js', 'icons', 'samples', 'sounds', 'tracks']
-JS_ORDER = ['util.js', 'sounds-manifest.js', 'tracks-manifest.js', 'engine.js', 'assets.js', 'music.js', 'game.js', 'beatpad.js', 'decks.js', 'school.js', 'ui.js', 'mixui.js']
+JS_ORDER = ['util.js', 'sounds-manifest.js', 'tracks-manifest.js', 'engine.js', 'assets.js', 'music.js', 'game.js', 'beatpad.js', 'decks.js', 'school.js', 'ui.js', 'mixui.js', 'songs.js', 'night.js', 'imports.js']
 
 
 def version():

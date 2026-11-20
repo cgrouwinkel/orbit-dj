@@ -22,14 +22,20 @@
     if (view === 'play' && G.state === 'running') { G.pause('user'); O.toast('Set paused'); }
     if (view === 'mix' && name !== 'mix') { O.decks.stopAll(); if (O.school.active) O.school.stop(); }
     if (name === 'mix') { if (G.state === 'running' || G.state === 'paused') G.stop(); G.stopDemo(); if (BP.playing) BP.stop(); }
+    if (view === 'songs' && O.songs) O.songs.leave();
+    if (name === 'songs') { if (G.state === 'running' || G.state === 'paused') G.stop(); G.stopDemo(); if (BP.playing) BP.stop(); }
     view = name;
+    const studio = name === 'pads' || name === 'songs';
     document.documentElement.classList.toggle('in-mix', name === 'mix');
+    document.documentElement.classList.toggle('in-studio', studio);
+    $$('#studio-switch button').forEach(b => b.setAttribute('aria-checked', String(b.dataset.studio === name)));
     $$('.view').forEach(v => v.classList.toggle('is-active', v.id === 'view-' + name));
-    $$('.tab').forEach(t => { const on = t.dataset.view === name; t.classList.toggle('is-active', on); t.setAttribute('aria-selected', String(on)); });
+    $$('.tab').forEach(t => { const on = t.dataset.view === name || (studio && t.dataset.view === 'pads'); t.classList.toggle('is-active', on); t.setAttribute('aria-selected', String(on)); });
     if (name === 'career') renderCareer();
     if (name === 'settings') renderSettings();
     if (name === 'pads') { renderBP(); BP.loadKit(); }
     if (name === 'mix' && O.mixui) O.mixui.enter();
+    if (name === 'songs' && O.songs) O.songs.enter();
     requestAnimationFrame(() => { resizeCanvases(); wake(); });
   }
   $$('[data-view]').forEach(b => b.addEventListener('click', () => showView(b.dataset.view)));
@@ -51,9 +57,11 @@
     $('#hud-stars').setAttribute('aria-label', st + ' of 3 stars');
   }
   function renderNowPlaying() {
-    const v = G.VENUES[G.stage];
-    $('#np-venue').textContent = 'VENUE ' + String(G.stage + 1).padStart(2, '0') + ' · ' + v.name + ' · ' + v.bpm + ' BPM';
-    $('#np-song').textContent = v.song;
+    const v = G.VENUES[G.stage], c = G.custom;
+    $('#np-venue').textContent = c ? 'QUICK PLAY · ' + M.STYLES[M.resolve(c.style)].label + ' · ' + c.bpm + ' BPM' : 'VENUE ' + String(G.stage + 1).padStart(2, '0') + ' · ' + v.name + ' · ' + v.bpm + ' BPM';
+    $('#np-song').textContent = c ? c.name : v.song;
+    $('#quick-name').textContent = c ? c.name : 'VENUE SONG'; $('#quick-exit').hidden = !c;
+    document.documentElement.classList.toggle('is-battle', !!(c && c.battle));
   }
 
   // ---------- highway renderer ----------
@@ -146,6 +154,19 @@
       ell((x0 + x1) / 2, hitY, rx * 0.5, ry * 0.5);
       c.lineWidth = 1.5; c.strokeStyle = hexA(P.lanes[i], 0.55); c.stroke();
     }
+    // DJ moves: a band across the whole highway for as long as the move lasts
+    if (running) for (const m of G.moves) {
+      if (m.t - now > travel) break;
+      if (now > m.t + m.dur + 0.2) continue;
+      const p0 = Math.max(pBottom, (m.t - now) / travel), p1 = Math.min(1, (m.t + m.dur - now) / travel);
+      if (p1 <= p0) continue;
+      const col = m.done ? (m.hit ? P.good : P.bad) : P.hype, live = now >= m.t && !m.done;
+      c.beginPath(); c.moveTo(xAt(0, p0), yAt(p0)); c.lineTo(xAt(0, p1), yAt(p1)); c.lineTo(xAt(4, p1), yAt(p1)); c.lineTo(xAt(4, p0), yAt(p0)); c.closePath();
+      c.fillStyle = hexA(col, live ? 0.26 : 0.14); c.fill();
+      c.strokeStyle = hexA(col, 0.9); c.lineWidth = 2; c.beginPath(); c.moveTo(xAt(0, p0), yAt(p0)); c.lineTo(xAt(4, p0), yAt(p0)); c.stroke();
+      const ps = Math.max(p0, 0.02), sc = sAt(ps);
+      if (sc > 0.42) { c.fillStyle = col; c.font = '900 ' + Math.round(8 + 9 * sc) + 'px system-ui, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'bottom'; c.fillText(m.label, cx, yAt(ps) - 3); }
+    }
     // notes: sustain tails and round gems, drawn far-to-near so closer ones overlap
     if (running) {
       const vis = [];
@@ -153,10 +174,11 @@
         if (n.t - now > travel) break;
         if (now - (n.t + (n.dur || 0)) > 0.3) continue;
         if (n.dur ? n.holdDone : n.hit) continue;
+        if (n.hidden && !n.done) continue; // Headliner echo battle: play it by ear
         vis.push(n);
       }
       for (let q = vis.length - 1; q >= 0; q--) {
-        const n = vis[q], col = P.lanes[n.lane], missed = n.done && !n.hit;
+        const n = vis[q], col = n.rival ? '#9a97a3' : P.lanes[n.lane], missed = n.done && !n.hit;
         const held = !!(G.holding[n.lane] && G.holding[n.lane].n === n);
         const glow = n.hype !== undefined && G.phrases[n.hype] && !G.phrases[n.hype].dead && !n.done;
         let p = (n.t - now) / travel;
@@ -186,14 +208,18 @@
         if (glow && !reduce) { c.shadowColor = P.hype; c.shadowBlur = 10 + 8 * s; }
         const g = c.createLinearGradient(0, y - ry, 0, y + ry);
         g.addColorStop(0, glow ? '#ffffff' : hexA('#ffffff', 0.55)); g.addColorStop(0.3, col); g.addColorStop(1, hexA(col, P.aero ? 0.7 : 0.82));
-        ell(xc, y, rx, ry); c.fillStyle = col; c.fill(); c.fillStyle = g; c.fill();
+        if (skin === 'neon' && !n.rival) { ell(xc, y, rx, ry); c.fillStyle = 'rgba(0,0,0,.55)'; c.fill(); if (!reduce) { c.shadowColor = col; c.shadowBlur = 12; } c.lineWidth = Math.max(2, ry * 0.35); c.strokeStyle = col; c.stroke(); }
+        else if (skin === 'vinyl' && !n.rival) { ell(xc, y, rx, ry); c.fillStyle = '#0c0b10'; c.fill(); c.strokeStyle = 'rgba(255,255,255,.22)'; c.lineWidth = 1; for (const f of [0.86, 0.72]) { ell(xc, y, rx * f, ry * f); c.stroke(); } }
+        else if (skin === 'gold' && !n.rival) { const gg = c.createLinearGradient(0, y - ry, 0, y + ry); gg.addColorStop(0, '#fff6c2'); gg.addColorStop(0.45, '#f2c230'); gg.addColorStop(1, '#8a5a00'); ell(xc, y, rx, ry); c.fillStyle = gg; c.fill(); }
+        else { ell(xc, y, rx, ry); c.fillStyle = col; c.fill(); c.fillStyle = g; c.fill(); }
+        const skinCap = n.rival || skin === 'classic' ? null : col;
         c.restore();
         c.lineWidth = glow ? 2.5 : 1.5; c.strokeStyle = glow ? P.hype : P.aero ? 'rgba(255,255,255,.9)' : '#000'; c.stroke();
-        ell(xc, y - ry * 0.1, rx * 0.52, ry * 0.52); c.fillStyle = glow ? P.hype : P.aero ? 'rgba(255,255,255,.92)' : '#f4efe6'; c.fill();
+        ell(xc, y - ry * 0.1, rx * 0.52, ry * 0.52); c.fillStyle = glow ? P.hype : skinCap ? skinCap : P.aero ? 'rgba(255,255,255,.92)' : '#f4efe6'; c.fill();
         c.lineWidth = 1; c.strokeStyle = 'rgba(0,0,0,.45)'; c.stroke();
         if (s > 0.55 && !missed && ry > 7) {
           c.fillStyle = '#0b0a0e'; c.font = '900 ' + Math.round(ry * 0.78) + 'px system-ui, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
-          c.fillText(n.finale ? '★' : G.LANES[n.lane].name[0], xc, y - ry * 0.08);
+          c.fillText(n.finale ? '★' : n.scr ? (n.scr === 'up' ? '▲' : '▼') : G.LANES[n.lane].name[0], xc, y - ry * 0.08);
         }
         c.globalAlpha = 1;
       }
@@ -297,7 +323,7 @@
   function updateStageMsg() {
     const v = G.VENUES[G.stage], first = !S.get('orbitV2FirstSetDone', false);
     if (G.state === 'idle') {
-      setStage('idle' + G.stage + tut.on, tut.on ? '' : '<div class="title">' + v.name + '</div><div class="sub">' + (first ? 'Tap START SET. When a note hits the line, tap its lane or pad.' : v.tag + ' Tap START SET.') + '</div>');
+      setStage('idle' + G.stage + tut.on + (G.custom ? G.custom.id : ''), tut.on ? '' : G.custom ? '<div class="title">QUICK PLAY</div><div class="sub">Tap START SET.</div>' : '<div class="title">' + v.name + '</div><div class="sub">' + (first ? 'Tap START SET. When a note hits the line, tap its lane or pad.' : v.tag + ' Tap START SET.') + '</div>');
     } else if (G.state === 'running') {
       const now = G.songTime(), beat = 60 / G.bpm();
       if (now < G.leadIn) {
@@ -305,6 +331,12 @@
         if (n <= 4 && n >= 1) setStage('cd' + n + !!G.drill, '<div class="big">' + n + '</div>' + (G.drill ? '' : '<div class="sub">' + (first ? 'Notes are coming. Tap when they touch the line.' : 'Count it in…') + '</div>'));
         else setStage('pre', '<div class="title">GET READY</div>');
       } else if (now < G.leadIn + beat) setStage('go', '<div class="big">GO!</div>');
+      else if (G.custom && G.custom.battle) { // echo battle: whose turn, and the running score
+        const turn = G.battleTurn(now), you = G.score, riv = G.rivalScore;
+        setStage('bt' + turn + (you >= riv), '<div class="battle-turn ' + turn + '">' + (turn === 'rival' ? 'LISTEN: ' + G.custom.battle.rival.name : turn === 'you' ? 'YOUR TURN: PLAY IT BACK' : '') + '</div>');
+        const sc = 'YOU ' + you.toLocaleString() + '  ·  ' + G.custom.battle.rival.name + ' ' + riv.toLocaleString();
+        if ($('#battle-score').textContent !== sc) $('#battle-score').textContent = sc;
+      }
       else setStage('', '');
     } else if (G.state === 'paused') {
       const why = { background: 'Paused when you left the app.', audio: 'Sound was interrupted by your phone.', user: 'Press RESUME when you’re ready.' }[G.pauseReason] || 'Press RESUME when you’re ready.';
@@ -348,13 +380,23 @@
     const b = e.target.closest('.lane-pad'); if (!b) return;
     e.preventDefault();
     const i = Array.prototype.indexOf.call(lanePads.children, b);
-    activePointers.set(e.pointerId, i); laneHit(i, e);
+    activePointers.set(e.pointerId, i); swipeY.set(e.pointerId, e.clientY); laneHit(i, e);
   });
   hw.cv.addEventListener('pointerdown', e => {
     e.preventDefault();
     const r = hw.cv.getBoundingClientRect(), i = O.clamp(Math.floor((e.clientX - r.left) / r.width * 4), 0, 3);
-    activePointers.set(e.pointerId, i); laneHit(i, e);
+    activePointers.set(e.pointerId, i); swipeY.set(e.pointerId, e.clientY); laneHit(i, e);
   });
+  // Scratch: drag up or down on the FX lane (pad or highway). Each change of direction is another scratch.
+  const swipeY = new Map();
+  const scratchMove = e => {
+    if (activePointers.get(e.pointerId) !== 3 || !swipeY.has(e.pointerId)) return;
+    const dy = e.clientY - swipeY.get(e.pointerId);
+    if (Math.abs(dy) < 16) return;
+    swipeY.set(e.pointerId, e.clientY);
+    G.scratch(dy < 0 ? 'up' : 'down', O.eventTime(e)); hw.flash[3] = performance.now(); wake();
+  };
+  lanePads.addEventListener('pointermove', scratchMove); hw.cv.addEventListener('pointermove', scratchMove);
   const release = e => { if (activePointers.has(e.pointerId)) { const i = activePointers.get(e.pointerId); padUp(i); G.release(i); activePointers.delete(e.pointerId); } };
   ['pointerup', 'pointercancel', 'pointerleave'].forEach(t => { lanePads.addEventListener(t, release); hw.cv.addEventListener(t, release); });
   lanePads.addEventListener('contextmenu', e => e.preventDefault());
@@ -369,7 +411,14 @@
   }
   let lastMult = 1;
   O.on('streak', n => callout(n + ' NOTE STREAK!', 'streak'));
-  O.on('finale', () => { if (G.crowd >= 0.34) callout('BIG FINISH!', 'hype'); });
+  O.on('finale', () => { if (G.crowd >= 0.34 && !(G.custom && G.custom.battle)) callout('BIG FINISH!', 'hype'); });
+  O.on('rival', r => { hw.flash[r.lane] = performance.now(); hw.sparks.push({ lane: r.lane, t: performance.now(), col: '#c9c6d2' }); wake(); });
+  let moveHelp = !S.get('orbitV4MoveHelp', false);
+  O.on('move', e => {
+    if (e.type === 'start') { callout(e.m.label, 'hype'); if (moveHelp) { moveHelp = false; S.set('orbitV4MoveHelp', true); O.toast('DJ move: slide the glowing control to the marker and hold it there.'); } }
+    else if (e.type === 'hit') callout('NICE MOVE! +' + 300 * G.multiplier(), 'streak');
+    wake();
+  });
   O.on('hold', h => { if (h.complete) hw.flames.push({ lane: h.lane, t: performance.now(), col: hw.pal.lanes[h.lane], big: true }); if (tut.on) coachProgress(); wake(); });
 
   // ---------- HYPE button (doubles as the HYPE meter) ----------
@@ -458,7 +507,21 @@
   xf.addEventListener('input', () => { const v = Number(xf.value); G.controlInput('xf', v); renderFaderOuts(); wake(); });
   eq.addEventListener('input', () => { G.controlInput('lowEq', Number(eq.value)); renderFaderOuts(); });
   filt.addEventListener('input', () => { const hz = Number(filt.value) >= 995 ? 20000 : hzFromPos(Number(filt.value)); G.controlInput('filterHz', hz); renderFaderOuts(); });
+  // DJ moves: a ghost marker on each slider shows where the move wants it
+  const ghosts = { xf: [xf, null], eq: [eq, null], filter: [filt, null] };
+  for (const k of Object.keys(ghosts)) { const g = document.createElement('i'); g.className = 'ghost'; g.hidden = true; const wrap = document.createElement('div'); wrap.className = 'ghost-wrap'; ghosts[k][0].parentNode.insertBefore(wrap, ghosts[k][0]); wrap.append(ghosts[k][0], g); ghosts[k][1] = g; }
+  function renderGhosts() {
+    const now = G.state === 'running' ? G.songTime() : -1;
+    for (const k of Object.keys(ghosts)) {
+      const g = ghosts[k][1], m = now < 0 ? null : G.activeMove(k, now), ctrl = g.closest('.ctrl');
+      if (!m) { if (!g.hidden) { g.hidden = true; ctrl.classList.remove('is-target', 'is-ontarget'); } continue; }
+      const v = G.moveTarget(m, now);
+      g.hidden = false; g.style.left = 'calc(11px + ' + (v * 100).toFixed(1) + '% - ' + (v * 22).toFixed(1) + 'px)';
+      ctrl.classList.add('is-target'); ctrl.classList.toggle('is-ontarget', Math.abs(G.pos[k] - v) <= 0.15);
+    }
+  }
   function renderFaderOuts() {
+    G.pos.xf = Number(xf.value) / 100; G.pos.eq = Number(eq.value) / 150; G.pos.filter = Number(filt.value) / 1000;
     const x = E.controls.xf;
     $('#xf-out').textContent = x <= 15 ? 'MELODY' : x >= 85 ? 'BASS' : x >= 45 && x <= 55 ? 'CENTER' : x < 50 ? 'MELODY SIDE' : 'BASS SIDE';
     $('#eq-out').textContent = Math.round(E.controls.lowEq) + '%';
@@ -656,8 +719,48 @@
   ['bp-change', 'bp-transport', 'bp-status', 'music'].forEach(ev => O.on(ev, () => { if (view === 'pads') renderBP(); wake(); }));
 
   // ---------- career ----------
+  // ---------- career map (v4): every venue is a chapter of different level types ----------
+  const gigStars = r => (!r ? 0 : r.score >= 90 ? 3 : r.score >= 75 ? 2 : r.score >= 55 ? 1 : 0);
+  const CAREER = [
+    [{ t: 'set' }, { t: 'battle' }, { t: 'beat', id: 'boombap' }],
+    [{ t: 'set' }, { t: 'battle' }, { t: 'beat', id: 'soul' }, { t: 'gig', id: 'backroom' }],
+    [{ t: 'set' }, { t: 'battle' }, { t: 'beat', id: 'house' }, { t: 'gig', id: 'warmup' }, { t: 'gig', id: 'peak' }],
+    [{ t: 'set' }, { t: 'battle' }, { t: 'beat', id: 'trap' }, { t: 'gig', id: 'closing' }, { t: 'gig', id: 'afterhours' }, { t: 'night' }]
+  ];
+  const RANKS = [[0, 'BEDROOM DJ'], [6, 'OPEN-DECK REGULAR'], [14, 'LOCAL OPENER'], [24, 'RESIDENT'], [36, 'HEADLINER'], [48, 'LEGEND']];
+  const SKINS = [['classic', 'CLASSIC', 0], ['vinyl', 'VINYL', 5], ['neon', 'NEON', 15], ['gold', 'GOLD', 30]];
+  const UNLOCK_AT = 4; // stars needed in a venue to open the next one
+  function nodeInfo(v, n) {
+    const SC = O.school;
+    if (n.t === 'set') return { label: 'SET', sub: G.VENUES[v].song, stars: (G.progress[v] || {}).stars || 0, go: () => playVenue(v) };
+    if (n.t === 'battle') return { label: 'ECHO BATTLE', sub: 'vs ' + G.RIVALS[v].name, stars: Math.max(0, ...['easy', 'normal', 'expert'].map(d => (G.quickBests['battle:' + v + ':' + d] || {}).stars || 0)), go: () => { G.select(v); G.setCustom(G.battle(v)); showView('play'); } };
+    if (n.t === 'beat') { const c = SC.BEAT_CHALLENGES.find(x => x.id === n.id); return { label: 'BEAT CHALLENGE', sub: c.name, stars: (SC.progress.challenges[n.id] || {}).stars || 0, go: () => { showView('pads'); const t = document.querySelector('[data-bptab="train"]'); if (t) t.click(); E.unlock(); SC.startChallenge(n.id).then(() => SC.listenChallenge()); } }; }
+    if (n.t === 'gig') { const g = SC.GIGS.find(x => x.id === n.id); return { label: 'MIX GIG', sub: g.name, stars: gigStars(SC.progress.gigs[n.id]), go: () => { showView('mix'); E.unlock(); SC.startGig(n.id); } }; }
+    return { label: 'CLUB NIGHT', sub: 'You pick the tracks', stars: (SC.progress.night || {}).stars || 0, go: () => { showView('mix'); E.unlock(); O.night.start(); } };
+  }
+  const venueStars = v => CAREER[v].reduce((n, x) => n + nodeInfo(v, x).stars, 0);
+  const careerStars = () => CAREER.reduce((n, _, v) => n + venueStars(v), 0);
+  const unlockAll = () => S.get('orbitV4UnlockAll', false) === true;
+  const venueOpen = v => v === 0 || unlockAll() || venueStars(v - 1) >= UNLOCK_AT || !!(G.progress[v] && G.progress[v].stars);
+  const rankFor = n => RANKS.filter(r => n >= r[0]).pop()[1];
+  const skinOpen = id => unlockAll() || careerStars() >= SKINS.find(k => k[0] === id)[2];
+  let skin = S.get('orbitV4Skin', 'classic'); if (!SKINS.some(k => k[0] === skin)) skin = 'classic';
+  // Tell the player when stars have opened something new (a venue, a rank, a highway skin).
+  function checkRewards() {
+    const seen = S.get('orbitV4Rewards', null), n = careerStars(), now = { stars: n, rank: rankFor(n), venues: CAREER.map((_, v) => venueOpen(v)), skins: SKINS.filter(k => n >= k[2]).map(k => k[0]) };
+    if (seen) {
+      const msgs = [];
+      now.venues.forEach((o, v) => { if (o && !seen.venues[v]) msgs.push(G.VENUES[v].name + ' is open'); });
+      now.skins.forEach(k => { if (!seen.skins.includes(k)) msgs.push(SKINS.find(x => x[0] === k)[1] + ' highway skin unlocked (Setup)'); });
+      if (now.rank !== seen.rank && n > seen.stars) msgs.push('New rank: ' + now.rank);
+      if (msgs.length) setTimeout(() => O.toast('★ ' + msgs.join(' · ')), 1400);
+    }
+    S.set('orbitV4Rewards', now);
+  }
+  ['finish', 'gig-result', 'challenge-result'].forEach(ev => O.on(ev, () => setTimeout(checkRewards, 50)));
   function renderCareer() {
-    const t = G.totals();
+    const t = G.totals(), total = careerStars();
+    $('#car-rank').textContent = rankFor(total) + ' · ' + total + '/' + CAREER.reduce((n, c) => n + c.length * 3, 0) + ' STARS';
     $('#tot-stars').textContent = t.stars + '/12';
     $('#tot-best').textContent = t.best.toLocaleString();
     $('#tot-cleared').textContent = t.cleared + '/4';
@@ -677,7 +780,11 @@
       const play = document.createElement('button');
       play.className = 'btn-start'; play.innerHTML = '<svg><use href="#i-play"/></svg><span>' + (rec.stars ? 'PLAY AGAIN' : 'PLAY') + '</span>';
       play.addEventListener('click', () => playVenue(i));
-      card.append(play);
+      const open = venueOpen(i), nodes = document.createElement('div'); nodes.className = 'node-row';
+      CAREER[i].slice(1).forEach(n => { const info = nodeInfo(i, n), b = document.createElement('button'); b.className = 'node' + (info.stars ? ' is-done' : ''); b.disabled = !open; b.innerHTML = '<b>' + info.label + '</b><span>' + info.sub + '</span><em>' + '★'.repeat(info.stars) + '☆'.repeat(3 - info.stars) + '</em>'; b.addEventListener('click', info.go); nodes.append(b); });
+      card.classList.toggle('is-locked', !open); play.disabled = !open;
+      if (!open) { const lock = document.createElement('div'); lock.className = 'vlock'; lock.textContent = 'Earn ' + UNLOCK_AT + ' stars at ' + G.VENUES[i - 1].name + ' to open (' + venueStars(i - 1) + '/' + UNLOCK_AT + ')'; card.append(lock); }
+      card.append(play, nodes);
       grid.append(card);
     });
     const SC = O.school, gigs = Object.values(SC.progress.gigs);
@@ -703,6 +810,9 @@
     setRadio($('#seg-speed'), 'data-speed', travel);
     setRadio($('#seg-padsound'), 'data-padsound', G.padSound);
     setRadio($('#seg-guide'), 'data-guide', G.guideMode);
+    setRadio($('#seg-moves'), 'data-moves', G.movesOn ? 'on' : 'off');
+    const sk = $('#seg-skin'); sk.innerHTML = SKINS.map(k => '<button role="radio" data-skin="' + k[0] + '"' + (skinOpen(k[0]) ? '' : ' disabled') + '>' + k[1] + (skinOpen(k[0]) ? '' : ' · ' + k[2] + '★') + '</button>').join(''); setRadio(sk, 'data-skin', skin);
+    setRadio($('#seg-unlock'), 'data-unlock', unlockAll() ? 'on' : 'off');
     $('#set-chopbank').value = G.chopBank;
     $('#chopbank-field').hidden = G.padSound !== 'chops';
     $('#set-offset').value = E.offsetMs; $('#set-offset-out').textContent = (E.offsetMs > 0 ? '+' : '') + E.offsetMs + ' ms';
@@ -719,6 +829,9 @@
   $$('.theme-card').forEach(b => b.addEventListener('click', () => setTheme(b.dataset.theme)));
   $('#set-motion').addEventListener('change', e => setMotion(e.target.checked));
   $('#seg-speed').addEventListener('click', e => { const b = e.target.closest('[data-speed]'); if (!b) return; travel = Number(b.dataset.speed); S.set('orbitV2Speed', travel); renderSettings(); });
+  $('#seg-skin').addEventListener('click', e => { const b = e.target.closest('[data-skin]'); if (!b || b.disabled) return; skin = b.dataset.skin; S.set('orbitV4Skin', skin); renderSettings(); wake(); });
+  $('#seg-unlock').addEventListener('click', e => { const b = e.target.closest('[data-unlock]'); if (!b) return; S.set('orbitV4UnlockAll', b.dataset.unlock === 'on'); renderSettings(); });
+  $('#seg-moves').addEventListener('click', e => { const b = e.target.closest('[data-moves]'); if (!b) return; G.setMoves(b.dataset.moves === 'on'); renderSettings(); });
   $('#seg-guide').addEventListener('click', e => { const b = e.target.closest('[data-guide]'); if (!b) return; G.setGuide(b.dataset.guide); renderSettings(); });
   $('#seg-padsound').addEventListener('click', e => { const b = e.target.closest('[data-padsound]'); if (!b) return; G.setPadSound(b.dataset.padsound); renderSettings(); });
   $('#set-chopbank').addEventListener('change', e => G.setPadSound(null, e.target.value));
@@ -875,10 +988,10 @@
     if (!S.get('orbitV2FirstSetDone', false)) S.set('orbitV2FirstSetDone', true);
     setTimeout(() => {
       const v = G.VENUES[r.stage];
-      $('#res-venue').textContent = v.name + ' · ' + G.DIFFS[r.difficulty].label;
+      $('#res-venue').textContent = (r.custom || v.name) + ' · ' + G.DIFFS[r.difficulty].label;
       const gEl = $('#res-grade'); gEl.textContent = r.grade; gEl.classList.toggle('long', r.grade.length > 1);
       $('#res-stars').innerHTML = starsHTML(r.stars);
-      $('#res-title').textContent = r.failed ? 'CROWD WALKED OUT AT ' + Math.round(r.progressPct * 100) + '%' : r.cleared ? 'VENUE CLEARED!' : 'KEEP PRACTISING';
+      $('#res-title').textContent = r.battle ? (r.battle.won ? 'YOU BEAT ' + r.battle.rival + '!' : r.battle.rival + ' WINS ' + r.battle.rivalScore.toLocaleString() + ' TO ' + r.score.toLocaleString()) : r.failed ? 'CROWD WALKED OUT AT ' + Math.round(r.progressPct * 100) + '%' : r.custom ? (r.cleared ? 'NICE SET!' : 'KEEP PRACTISING') : r.cleared ? 'VENUE CLEARED!' : 'KEEP PRACTISING';
       $('#res-score').textContent = r.score.toLocaleString();
       $('#res-pb').hidden = !r.newBest;
       $('#res-rhythm').textContent = r.rhythmPts + ' / 700 · ' + Math.round(r.accuracy * 100) + '%';
@@ -886,9 +999,9 @@
       $('#res-equip').textContent = r.equipmentPts + ' / 300 · ' + r.ctrlGrade;
       $('#res-equip-bar').style.width = (r.equipmentPts / 3) + '%';
       const c = r.counts;
-      $('#res-counts').innerHTML = '<span>PERFECT <b>' + c.perfect + '</b></span><span>GREAT <b>' + c.great + '</b></span><span>GOOD <b>' + c.good + '</b></span><span>MISS <b>' + c.miss + '</b></span><span>BEST STREAK <b>' + r.maxCombo + '</b></span><span>HOLDS <b>' + r.holdsDone + '/' + r.holdsTotal + '</b></span><span>HYPE <b>×' + r.hypeUses + '</b></span><span>TOTAL <b>' + r.combined + '/1000</b></span>';
+      $('#res-counts').innerHTML = '<span>PERFECT <b>' + c.perfect + '</b></span><span>GREAT <b>' + c.great + '</b></span><span>GOOD <b>' + c.good + '</b></span><span>MISS <b>' + c.miss + '</b></span><span>BEST STREAK <b>' + r.maxCombo + '</b></span><span>HOLDS <b>' + r.holdsDone + '/' + r.holdsTotal + '</b></span>' + (r.movesTotal ? '<span>DJ MOVES <b>' + r.movesDone + '/' + r.movesTotal + '</b></span>' : '') + '<span>HYPE <b>×' + r.hypeUses + '</b></span><span>TOTAL <b>' + r.combined + '/1000</b></span>';
       const next = $('#res-next');
-      next.querySelector('span').textContent = r.failed ? 'TRY AGAIN' : r.stage < 3 ? 'NEXT VENUE' : 'PLAY AGAIN';
+      next.querySelector('span').textContent = r.failed ? 'TRY AGAIN' : r.custom ? 'PLAY AGAIN' : r.stage < 3 ? 'NEXT VENUE' : 'PLAY AGAIN';
       openOverlay('ov-results');
     }, 450);
   });
@@ -896,7 +1009,7 @@
   $('#res-career').addEventListener('click', () => { closeOverlay('ov-results'); G.state = 'idle'; O.emit('game-state', 'idle'); showView('career'); });
   $('#res-next').addEventListener('click', () => {
     closeOverlay('ov-results');
-    if (G.lastResult && G.lastResult.failed) { G.start(); return; }
+    if (G.lastResult && (G.lastResult.failed || G.lastResult.custom)) { G.start(); return; }
     if (G.stage < 3) { const n = G.stage + 1; G.select(n); const briefed = S.get('orbitV2Briefed', {}); if (!briefed[n]) { openBrief(n); return; } }
     G.start();
   });
@@ -963,6 +1076,7 @@
       if (lane >= 0) { e.preventDefault(); keyLane.set(k, lane); laneHit(lane, e); return; }
       if (e.code === 'Space') { e.preventDefault(); primaryAction(); return; }
       if (k === 'h' || k === 'enter') { e.preventDefault(); G.activateHype(); return; }
+      if ((k === 'arrowup' || k === 'arrowdown') && view === 'play') { e.preventDefault(); G.scratch(k === 'arrowup' ? 'up' : 'down'); wake(); return; }
       if (/^[1-8]$/.test(k)) { e.preventDefault(); BP.padDown(Number(k) - 1, O.eventTime(e), 1); }
     } else if (view === 'pads') {
       const i = PAD_KEYS.indexOf(k);
@@ -980,13 +1094,13 @@
     E.tick();
     G.update();
     if (view === 'play') {
-      drawHighway(); updateStageMsg(); drawSpectrum(); if (G.state === 'running') renderHype();
+      drawHighway(); updateStageMsg(); drawSpectrum(); if (G.state === 'running') renderHype(); renderGhosts();
       $('#progress').style.width = (G.state === 'running' || G.state === 'paused' ? O.clamp(G.songTime() / G.DURATION * 100, 0, 100) : G.state === 'finished' ? 100 : 0) + '%';
     } else if (view === 'pads') { drawLCD(false); }
     else if (view === 'mix' && O.mixui) O.mixui.frame();
     O.decks.tick(); O.school.tick();
     const busy = G.state === 'running' || M.playing || BP.playing || O.decks.anyPlaying() || (view === 'mix' && !!O.school.active) || (view === 'pads' && !!O.school.beatActive);
-    if (busy || performance.now() < wakeUntil) raf = requestAnimationFrame(loop);
+    if ((busy || performance.now() < wakeUntil) && !raf) raf = requestAnimationFrame(loop); // !raf: something in this frame may already have called wake()
   }
 
   // ---------- event wiring ----------
@@ -1030,5 +1144,5 @@
   $('#ctrl-feedback').textContent = G.feedback || '';
   resizeCanvases(); updateStageMsg();
   if (!S.get('orbitV22Tutorial', false)) openOverlay('ov-intro'); // new players land straight in the tutorial
-  O.ui = { tutorial: tut, tutStart, tutEnd, showView, openBrief, openOverlay, closeOverlay, setTheme, setMotion, wake, get view() { return view; }, calibClicks: () => (calib ? calib.clicks.slice() : null) };
+  O.ui = { career: { CAREER, careerStars, venueOpen, venueStars, rankFor, checkRewards, setSkin: k => { skin = k; } }, tutorial: tut, tutStart, tutEnd, showView, openBrief, openOverlay, closeOverlay, setTheme, setMotion, wake, get view() { return view; }, calibClicks: () => (calib ? calib.clicks.slice() : null) };
 })();

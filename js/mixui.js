@@ -4,8 +4,9 @@
   const O = window.ORBIT, E = O.engine, D = O.decks, SC = O.school, BP = O.beatpad, $ = O.$, $$ = O.$$, clamp = O.clamp;
   const ui = O.ui, wake = () => ui.wake();
   const el = (tag, cls, html) => { const n = document.createElement(tag); if (cls) n.className = cls; if (html !== undefined) n.innerHTML = html; return n; };
+  const esc = t => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   const fmtTime = s => { s = Math.max(0, Math.round(s)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
-  const SECNAME = { mixin: 'MIX IN', intro: 'INTRO', verse: 'VERSE', build: 'BUILD', drop: 'DROP', break: 'BREAK', drop2: 'DROP 2', mixout: 'MIX OUT' };
+  const SECNAME = { mixin: 'MIX IN', intro: 'INTRO', verse: 'VERSE', build: 'BUILD', drop: 'DROP', break: 'BREAK', drop2: 'DROP 2', mixout: 'MIX OUT', outro: 'OUTRO', track: 'TRACK' };
 
   // ---------- custom controls: knobs and faders (relative drag, double-tap resets) ----------
   const ctls = [];
@@ -217,11 +218,16 @@
     pickFor = i; $('#tracks-title').textContent = 'LOAD A TRACK ON DECK ' + 'AB'[i];
     const list = $('#track-list'); list.replaceChildren();
     const other = D.decks[1 - i];
-    D.TRACKS.forEach(T => {
+    D.library().forEach(T => {
       const fits = !other.track || Math.abs(D.bpm(other) / T.bpm - 1) <= D.RANGE;
-      const b = el('button', 'track-row', '<b>' + T.title + '</b><span>' + O.music.STYLES[T.style].label + ' · ' + T.key + '</span><em>' + T.bpm + ' BPM</em>' + (other.track ? '<small class="' + (fits ? 'fit' : 'nofit') + '">' + (fits ? 'MIXES WITH DECK ' + other.name : 'TOO FAR FROM DECK ' + other.name) + '</small>' : ''));
+      const b = el('button', 'track-row', '<b>' + esc(T.title) + '</b><span>' + esc(T.sub || O.music.STYLES[T.style].label + ' · ' + T.key) + '</span><em>' + T.bpm + ' BPM</em>' + (O.night ? O.night.tag(T) : '') + (other.track ? '<small class="' + (fits ? 'fit' : 'nofit') + '">' + (fits ? 'MIXES WITH DECK ' + other.name : 'TOO FAR FROM DECK ' + other.name) + '</small>' : ''));
       b.addEventListener('click', () => { E.unlock(); ui.closeOverlay('ov-tracks'); D.load(i, T.id); });
       list.append(b);
+      if (T.imported) { // grid fixes for imported audio
+        const row = el('div', 'imp-fix', '<span>' + T.bpm.toFixed(1) + ' BPM grid:</span>');
+        [['half', '½ TEMPO'], ['double', '2× TEMPO'], ['shift', 'MOVE BEAT 1'], ['del', 'DELETE']].forEach(([k, label]) => { const x = el('button', 'btn btn-small', label); x.addEventListener('click', async () => { if (k === 'del') { if (!confirm('Delete this imported track from this device?')) return; await O.imports.remove(T.imported); } else await O.imports.fix(T.imported, k); openTracks(pickFor); }); row.append(x); });
+        list.append(row);
+      }
     });
     ui.openOverlay('ov-tracks');
   }
@@ -236,16 +242,18 @@
     else if (a.kind === 'lesson') {
       if (a.done) { const n = SC.nextLesson(a.def.id); step = 'LESSON COMPLETE'; text = a.def.name + ' done.' + (n ? ' Next: ' + SC.LESSONS.find(l => l.id === n).name + '.' : ' That was the last lesson. Try a gig.'); next = true; quit = true; cls = 'is-pass'; }
       else { step = (a.step + 1) + ' / ' + a.def.steps.length + ' · ' + a.def.name; text = a.note || a.def.steps[a.step].t; quit = true; }
-    } else { step = 'GIG · ' + a.def.name; text = a.done ? 'Mix finished.' : SC.gigHint(); quit = true; next = !a.done; }
+    } else if (a.kind === 'night') { step = 'CLUB NIGHT · MIX ' + Math.min(a.n + 1, O.night.TARGET) + '/' + O.night.TARGET + ' · CROWD ' + Math.round(a.energy) + '%'; text = a.done ? 'Night over.' : O.night.hint(a); quit = true; next = !a.done && a.n > 0; cls = a.energy < 30 ? 'is-low' : ''; }
+    else { step = 'GIG · ' + a.def.name; text = a.done ? 'Mix finished.' : SC.gigHint(); quit = true; next = !a.done; }
     const key = step + '|' + text + '|' + quit + next;
     if (key === coachKey) return; coachKey = key;
     mcStep.textContent = step; mcText.textContent = text; mcQuit.hidden = !quit; mcNext.hidden = !next;
-    mcNext.textContent = a && a.kind === 'gig' ? 'END MIX' : a && a.done && !SC.nextLesson(a.def.id) ? 'GIGS' : 'NEXT';
+    mcNext.textContent = a && a.kind === 'night' ? 'END NIGHT' : a && a.kind === 'gig' ? 'END MIX' : a && a.done && !SC.nextLesson(a.def.id) ? 'GIGS' : 'NEXT';
     $('#mix-coach').className = 'mix-coach ' + cls;
   }
   mcQuit.addEventListener('click', () => { SC.stop(); });
   mcNext.addEventListener('click', () => {
     const a = SC.active; if (!a) return;
+    if (a.kind === 'night') { O.night.finish(); return; }
     if (a.kind === 'gig') { SC.finishGig(); return; }
     const n = SC.nextLesson(a.def.id); if (n) { E.unlock(); SC.startLesson(n); } else { SC.stop(); openSchool(); }
   });
@@ -254,6 +262,8 @@
     const L = $('#mix-lessons'), G = $('#mix-gigs'); L.replaceChildren(); G.replaceChildren();
     SC.LESSONS.forEach((l, k) => { const b = el('button', 'lesson-row' + (SC.progress.mix[l.id] ? ' is-done' : ''), '<i>' + (SC.progress.mix[l.id] ? '✓' : k + 1) + '</i><span>' + l.name + '</span>'); b.addEventListener('click', () => { E.unlock(); ui.closeOverlay('ov-school'); SC.startLesson(l.id); }); L.append(b); });
     SC.GIGS.forEach(g => { const r = SC.progress.gigs[g.id]; const b = el('button', 'gig-row', '<b>' + g.name + '</b><span>' + g.blurb + '</span><em>' + (r ? r.grade + ' · ' + r.score : 'NOT PLAYED') + '</em>'); b.addEventListener('click', () => { E.unlock(); ui.closeOverlay('ov-school'); SC.startGig(g.id); }); G.append(b); });
+    const nb = SC.progress.night, nrow = el('button', 'gig-row night-row', '<b>CLUB NIGHT</b><span>You pick the tracks. Three mixes in a row; the crowd makes requests and reacts to every choice.</span><em>' + (nb ? '★'.repeat(nb.stars) + ' ' + nb.score : 'NOT PLAYED') + '</em>');
+    nrow.addEventListener('click', () => { E.unlock(); ui.closeOverlay('ov-school'); O.night.start(); }); G.append(nrow);
     ui.openOverlay('ov-school');
   }
   $('#school-free').addEventListener('click', () => { SC.stop(); ui.closeOverlay('ov-school'); });
@@ -262,19 +272,20 @@
     if (a && a.kind === 'lesson' && !a.loading && a.def.pads) showPads(dk[0], true);
     dk.forEach(renderDeck); renderMixer(); wake();
   });
+  O.on('imports', () => { if (!$('#ov-tracks').hidden) openTracks(pickFor); });
   O.on('gig-result', r => {
     setTimeout(() => {
-      $('#gig-name').textContent = 'GIG · ' + r.name;
+      $('#gig-name').textContent = (r.night ? '' : 'GIG · ') + r.name;
       const g = $('#gig-grade'); g.textContent = r.grade; g.classList.toggle('long', r.grade.length > 1);
-      $('#gig-title').textContent = r.total >= 65 ? 'CLEAN TRANSITION' : r.total >= 50 ? 'GETTING THERE' : 'KEEP PRACTISING';
+      $('#gig-title').textContent = r.title ? r.title : r.total >= 65 ? 'CLEAN TRANSITION' : r.total >= 50 ? 'GETTING THERE' : 'KEEP PRACTISING';
       $('#gig-score').textContent = r.total + ' / 100'; $('#gig-pb').hidden = !r.best;
-      const rows = [['BEATMATCH', r.parts.beat, 35], ['PHRASING', r.parts.phrase, 20], ['BASS SWAP', r.parts.bass, 20], ['LEVELS', r.parts.levels, 10], ['FINISH', r.parts.finish, 15]];
-      $('#gig-bars').innerHTML = rows.map(([n, v, w]) => '<div><span>' + n + ' <small>' + w + '%</small></span><b>' + v + '</b><div class="meter"><i style="width:' + v + '%"></i></div></div>').join('');
+      const rows = r.rows || [['BEATMATCH', r.parts.beat, 35], ['PHRASING', r.parts.phrase, 20], ['BASS SWAP', r.parts.bass, 20], ['LEVELS', r.parts.levels, 10], ['FINISH', r.parts.finish, 15]];
+      $('#gig-bars').innerHTML = rows.map(([n, v, w]) => '<div><span>' + n + (w ? ' <small>' + w + '%</small>' : '') + '</span><b>' + v + '</b><div class="meter"><i style="width:' + v + '%"></i></div></div>').join('');
       $('#gig-tips').innerHTML = r.tips.slice(0, 2).map(t => '<li>' + t + '</li>').join('');
       ui.openOverlay('ov-gig');
     }, 500);
   });
-  $('#gig-retry').addEventListener('click', () => { const a = SC.active; ui.closeOverlay('ov-gig'); if (a) { E.unlock(); SC.startGig(a.def.id); } });
+  $('#gig-retry').addEventListener('click', () => { const a = SC.active; ui.closeOverlay('ov-gig'); if (a) { E.unlock(); if (a.kind === 'night') O.night.start(); else SC.startGig(a.def.id); } });
   $('#gig-menu').addEventListener('click', () => { ui.closeOverlay('ov-gig'); SC.stop(); openSchool(); });
 
   // ---------- Beats tab trainer ----------
@@ -284,8 +295,26 @@
     SC.BEAT_LESSONS.forEach((l, k) => { const b = el('button', 'lesson-row' + (SC.progress.beat[l.id] ? ' is-done' : '') + (SC.beatActive && SC.beatActive.def === l ? ' is-on' : ''), '<i>' + (SC.progress.beat[l.id] ? '✓' : k + 1) + '</i><span>' + l.name + '</span>'); b.addEventListener('click', () => { E.unlock(); SC.startBeat(l.id); }); bl.append(b); });
     $('#beat-quit').hidden = !SC.beatActive;
   }
+  // beat challenges
+  const bc = $('#beat-challenges');
+  function renderChallenges() {
+    bc.replaceChildren();
+    SC.BEAT_CHALLENGES.forEach(c => { const r = SC.progress.challenges[c.id]; const b = el('button', 'lesson-row' + (r && r.stars ? ' is-done' : '') + (SC.challenge && SC.challenge.def === c ? ' is-on' : ''), '<i>' + (r ? r.stars + '★' : '?') + '</i><span>' + c.name + (r ? ' · ' + r.score + '%' : '') + '</span>'); b.addEventListener('click', () => { E.unlock(); SC.startChallenge(c.id).then(() => SC.listenChallenge()); }); bc.append(b); });
+    const on = !!SC.challenge; $('#ch-actions').hidden = !on;
+  }
+  $('#ch-listen').addEventListener('click', () => { E.unlock(); SC.listenChallenge(); });
+  $('#ch-check').addEventListener('click', () => { const r = SC.checkChallenge(); if (r) O.toast(r.score >= 100 ? 'Perfect copy! ★★★' : r.score + '% match' + (r.stars ? ' · ' + '★'.repeat(r.stars) : '') + ' · ' + r.missing + ' missing, ' + r.extra + ' extra. LISTEN again and adjust.'); });
+  $('#ch-quit').addEventListener('click', () => SC.stopChallenge(true));
   let beatKey = '';
   function renderBeatCoach() {
+    const ch = SC.challenge;
+    if (ch) {
+      bpCoach.hidden = false;
+      const key = 'ch' + ch.def.id + SC.challengeMatch() + (ch.result ? ch.result.score : ''); if (key === beatKey) return; beatKey = key;
+      $('#bpc-step').textContent = 'CHALLENGE · ' + ch.def.name; $('#bpc-count').textContent = ch.result ? 'LAST CHECK ' + ch.result.score + '%' : '';
+      $('#bpc-text').textContent = 'Recreate the beat by ear in STEPS. ' + ch.def.hint + ' LISTEN replays it; CHECK scores your copy.';
+      bpCoach.classList.toggle('is-pass', !!(ch.result && ch.result.score >= 100)); return;
+    }
     const a = SC.beatActive; bpCoach.hidden = !a; if (!a) { beatKey = ''; return; }
     const st = a.def.steps[Math.min(a.step, a.def.steps.length - 1)];
     const step = a.done ? 'LESSON COMPLETE ✓' : (a.step + 1) + ' / ' + a.def.steps.length + ' · ' + a.def.name;
@@ -295,13 +324,13 @@
     bpCoach.classList.toggle('is-pass', a.done);
   }
   O.on('beat-school', a => {
-    renderBeatList(); beatKey = ''; renderBeatCoach();
+    renderBeatList(); renderChallenges(); beatKey = ''; renderBeatCoach();
     if (a && !a.done && a.step === 0) { const t = document.querySelector('[data-bptab="steps"]'); if (t) t.click(); } // show the step strip under the coach
     wake();
   });
   $('#beat-quit').addEventListener('click', () => SC.stopBeat());
-  ['bp-change', 'bp-select', 'bp-transport', 'bp-hit'].forEach(ev => O.on(ev, () => { if (SC.beatActive) { renderBeatCoach(); wake(); } }));
-  renderBeatList();
+  ['bp-change', 'bp-select', 'bp-transport', 'bp-hit'].forEach(ev => O.on(ev, () => { if (SC.beatActive || SC.challenge) { renderBeatCoach(); wake(); } }));
+  renderBeatList(); renderChallenges();
 
   // ---------- view lifecycle ----------
   let hintAt = 0;

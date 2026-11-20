@@ -24,7 +24,8 @@
     mixer: { xf: 0.5, master: 0.8, split: false, fx: { type: 'echo', beats: 1, amount: 0.5 } },
     vinyl: false, quantize: true, syncLocked: false, g: null
   });
-  D.track = id => TRACKS.find(t => t.id === id) || null;
+  // D.library() (set in songs.js) adds the player's own songs and imported audio to the built-in tracks.
+  D.track = id => (D.library ? D.library() : TRACKS).find(t => t.id === id) || null;
   D.other = d => D.decks[1 - d.i];
 
   // ---------- mixer maths ----------
@@ -132,6 +133,8 @@
   };
   function decodeTrack(id) {
     const key = E.generation + '|' + id;
+    const T = D.track(id);
+    if (T && T.render && !decoded.has(key)) decoded.set(key, T.render().then(analyse).catch(e => { decoded.delete(key); throw e; })); // built in the browser
     if (!decoded.has(key)) decoded.set(key, D.fetchTrack(id).then(ab => new Promise((res, rej) => E.ctx.decodeAudioData(ab.slice(0), res, rej))).then(analyse).catch(e => { decoded.delete(key); throw e; }));
     return decoded.get(key);
   }
@@ -157,7 +160,8 @@
     try {
       const r = await decodeTrack(id);
       if (d.wanted !== id) return false;
-      d.track = Object.assign({}, T, { first: r.first, beat: 60 / T.bpm }); d.buf = r.buf; d.peaks = r.peaks;
+      d.track = Object.assign({}, T, { first: T.imported ? T.first : r.first, beat: 60 / T.bpm }); // imported audio: beat 1 comes from the tempo analysis
+      d.buf = r.buf; d.peaks = r.peaks;
       d.pos = d.cue = r.first; d.hot = d.hot.map(() => null); d.loop = null; d.loopBeats = 4; d.slip = null; d.tempo = 0; d.bend = 0; d.sync = false; d.rate = 1;
       d.stats = { plays: 0, cuePreview: 0, cueReturn: 0, hotJumps: 0, rolls: 0, jumps: 0, samples: 0, nudges: 0, scrubs: 0, startAt: null };
       return true;

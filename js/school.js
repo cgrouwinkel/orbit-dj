@@ -9,7 +9,7 @@
   const near = (v, x, e) => Math.abs(v - x) <= (e === undefined ? 0.05 : e);
   const [A, B] = D.decks;
   const saved = S.get(KEY, {}) || {};
-  const SC = (O.school = { progress: { mix: saved.mix || {}, gigs: saved.gigs || {}, beat: saved.beat || {} }, active: null, beatActive: null });
+  const SC = (O.school = { progress: { mix: saved.mix || {}, gigs: saved.gigs || {}, beat: saved.beat || {}, night: saved.night || null, challenges: saved.challenges || {} }, active: null, beatActive: null });
   const persist = () => S.set(KEY, SC.progress);
   // kill a control and bring it back: used for "turn it all the way down, then reset" steps
   const downUp = (get, lo) => (a, b, m) => { if (get(a, b) < (lo || 0.08)) m.down = true; return !!m.down && near(get(a, b), 0.5, 0.06); };
@@ -130,7 +130,7 @@
   // ================= gigs: scored transitions =================
   const GIGS = [
     { id: 'warmup', name: 'WARM-UP SLOT', a: 'glass', b: 'neon', sync: true, blurb: 'Bass house into tech house, 126 to 124 BPM. SYNC allowed.' },
-    { id: 'backroom', name: 'BACK ROOM', a: 'groove', b: 'bounce', sync: true, blurb: 'Boom bap into chipmunk soul, 88 to 94 BPM. Swung beats, SYNC allowed.' },
+    { id: 'backroom', name: 'BACK ROOM', a: 'groove', b: 'bounce', sync: true, blurb: 'Boom bap into soul, 88 to 94 BPM. Swung beats, SYNC allowed.' },
     { id: 'peak', name: 'PEAK TIME', a: 'neon', b: 'tonic', sync: false, blurb: 'Tech house into UK garage, 124 to 132 BPM. No SYNC: tempo fader and jog only.' },
     { id: 'closing', name: 'CLOSING SET', a: 'tonic', b: 'final', sync: false, blurb: 'UK garage into dubstep, 132 to 140 BPM. No SYNC, a big tempo jump.' },
     { id: 'afterhours', name: 'AFTER HOURS', a: 'final', b: 'night', sync: true, blurb: 'Dubstep into trap, both at 140 BPM. The tempo is easy; the phrasing is the test.' }
@@ -261,6 +261,65 @@
   };
   O.on('bp-hit', h => { const a = SC.beatActive; if (a && !a.done && BP.noteRepeat && BP.held && BP.held.size && h.pad === 2) a.mem.rolls = (a.mem.rolls || 0) + 1; });
 
+  // ================= beat challenges: recreate a beat by ear =================
+  const CH = (kit, bpm, swing, target) => ({ kit, bpm, swing, target });
+  const BEAT_CHALLENGES = [
+    Object.assign({ id: 'boombap', name: 'BOOM BAP BREAK', hint: 'Kick, snare and eighth-note hats, with a lazy swing.' }, CH('dusty', 88, 58, { 0: [0, 3, 10, 11], 1: [4, 12], 2: [0, 2, 4, 6, 8, 10, 12, 14] })),
+    Object.assign({ id: 'soul', name: 'SOUL CLAP', hint: 'Snare and clap land together. Tambourine on the eighths.' }, CH('dusty', 96, 54, { 0: [0, 6, 8, 10], 1: [4, 12], 6: [4, 12], 10: [0, 2, 4, 6, 8, 10, 12, 14] })),
+    Object.assign({ id: 'house', name: 'FOUR TO THE FLOOR', hint: 'Kick on every beat, clap on 2 and 4, open hat on every offbeat.' }, CH('club', 126, 50, { 0: [0, 4, 8, 12], 1: [4, 12], 3: [2, 6, 10, 14], 7: [1, 3, 5, 7, 9, 11, 13, 15] })),
+    Object.assign({ id: 'trap', name: 'HALF-TIME TRAP', hint: 'One snare, on beat 3. The hats roll at the end of the bar.' }, CH('midnight', 140, 50, { 4: [0, 7, 10], 1: [8], 5: [8], 2: [0, 2, 4, 6, 8, 10, 12, 13, 14, 15] }))
+  ];
+  SC.BEAT_CHALLENGES = BEAT_CHALLENGES; SC.challenge = null;
+  const tgtSet = def => { const out = new Set(); for (const pad of Object.keys(def.target)) for (const st of def.target[pad]) out.add(pad + ':' + st); return out; };
+  // How close the player's pattern is to the target, 0-100 (shared hits over all hits in either).
+  SC.challengeMatch = function () {
+    const c = SC.challenge; if (!c) return 0;
+    const want = tgtSet(c.def), have = new Set(BP.pattern().events.map(e => e.pad + ':' + (Math.round(e.step) % 16)));
+    let both = 0; for (const k of have) if (want.has(k)) both++;
+    const all = new Set([...want, ...have]).size;
+    return all ? Math.round(100 * both / all) : 0;
+  };
+  SC.startChallenge = async function (id) {
+    const def = BEAT_CHALLENGES.find(x => x.id === id); if (!def) return false;
+    if (SC.challenge) SC.stopChallenge(true);
+    if (SC.beatActive) SC.stopBeat();
+    if (BP.playing) BP.stop();
+    SC.challenge = { def, backup: { kit: BP.kit, bpm: BP.bpm, swing: BP.swing, slot: BP.cur, pattern: JSON.parse(JSON.stringify(BP.pattern())) }, plays: 0, result: null };
+    BP.setKit(def.kit); BP.setBpm(def.bpm); BP.setSwing(def.swing);
+    BP.patterns[BP.cur] = { bars: 1, events: [] }; BP.setSwing(def.swing); // (setSwing saves and redraws)
+    await BP.loadKit();
+    O.emit('beat-school', null);
+    return true;
+  };
+  SC.listenChallenge = async function () {
+    const c = SC.challenge; if (!c) return false;
+    if (!(await E.ensureRunning())) { O.emit('needs-audio', 'beats'); return false; }
+    if (BP.playing) BP.stop();
+    await BP.loadKit();
+    const unit = 60 / c.def.bpm / 4, sw = (c.def.swing / 100 - 0.5) * 2 * unit, t0 = E.ctx.currentTime + 0.12;
+    for (let rep = 0; rep < 2; rep++) for (const pad of Object.keys(c.def.target)) for (const st of c.def.target[pad]) O.synth.kit(E.ctx, E.nodes.sampler, c.def.kit, Number(pad), t0 + (rep * 16 + st) * unit + (st % 2 ? sw : 0), { vel: 0.9 });
+    c.plays++; c.until = performance.now() + (32 * unit + 0.2) * 1000;
+    O.emit('beat-school', null);
+    return true;
+  };
+  SC.checkChallenge = function () {
+    const c = SC.challenge; if (!c) return null;
+    const score = SC.challengeMatch(), stars = score >= 100 ? 3 : score >= 85 ? 2 : score >= 65 ? 1 : 0, old = SC.progress.challenges[c.def.id];
+    if (!old || score > old.score) { SC.progress.challenges[c.def.id] = { score, stars }; persist(); }
+    const want = tgtSet(c.def), have = new Set(BP.pattern().events.map(e => e.pad + ':' + (Math.round(e.step) % 16)));
+    let missing = 0, extra = 0; for (const k of want) if (!have.has(k)) missing++; for (const k of have) if (!want.has(k)) extra++;
+    c.result = { id: c.def.id, score, stars, missing, extra };
+    O.emit('challenge-result', c.result); O.emit('beat-school', null);
+    return c.result;
+  };
+  // restore: put the player's own pattern, kit, tempo and swing back
+  SC.stopChallenge = function (restore) {
+    const c = SC.challenge; if (!c) return; SC.challenge = null;
+    if (BP.playing) BP.stop();
+    if (restore !== false) { const b = c.backup; BP.patterns[b.slot] = b.pattern; BP.setKit(b.kit); BP.setBpm(b.bpm); BP.setSwing(b.swing); }
+    O.emit('beat-school', null);
+  };
+
   // ================= step runner =================
   SC.tick = function () {
     const now = performance.now();
@@ -268,6 +327,7 @@
     if (a && !a.loading && !a.done) {
       const dt = Math.min(0.25, (now - a.last) / 1000); a.last = now;
       if (a.kind === 'gig') gigTick(a, dt);
+      else if (a.kind === 'night') O.night.tick(a, dt);
       else {
         // keep the lesson's music going: loop back before the drums-only outro
         for (const d of D.decks) if (d.playing && d.track && a.def.id !== 'mix') { const w = D.where(d); if (w && w.sec === 'mixout') D.seek(d, secStart(d, 'verse')); }
@@ -291,5 +351,5 @@
       }
     }
   };
-  SC.resetProgress = function () { SC.progress = { mix: {}, gigs: {}, beat: {} }; persist(); };
+  SC.resetProgress = function () { SC.progress = { mix: {}, gigs: {}, beat: {}, night: null, challenges: {} }; persist(); };
 })();

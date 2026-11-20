@@ -257,6 +257,66 @@ input[type=range]::-moz-range-thumb { width: 22px; height: 30px; border-radius: 
 .stage-msg .sub { margin-top: 8px; font: 700 12px/1.4 var(--font-ui); color: var(--ink); background: rgba(0,0,0,.55); padding: 6px 10px; border-radius: 6px; max-width: 280px; }
 .theme-aero .stage-msg .sub { border-radius: 12px; background: rgba(0,25,60,.55); }
 
+/* v4: imported audio */
+.imp-fix { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: -2px 0 4px; font: 700 10px var(--font-ui); color: var(--muted); } .imp-fix .btn { min-height: 28px; padding: 2px 8px; font-size: 9.5px; }
+/* v4: career map */
+.car-rank { margin-top: 4px; font: 800 11px/1 var(--font-ui); letter-spacing: .14em; color: var(--hype); }
+.node-row { display: grid; gap: 4px; }
+.node { display: grid; grid-template-columns: 1fr auto; gap: 0 6px; align-items: center; padding: 5px 8px; min-height: 38px; border-radius: var(--r); border: 1px solid var(--line); background: rgba(0,0,0,.28); color: var(--ink); text-align: left; }
+.node b { font: 800 10px/1.1 var(--font-ui); letter-spacing: .1em; } .node span { grid-column: 1; font: 600 10.5px/1.2 var(--font-ui); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.node em { grid-column: 2; grid-row: 1 / span 2; font-style: normal; font-size: 12px; color: var(--dim); letter-spacing: 1px; } .node.is-done em { color: var(--accent); }
+.node:disabled, .venue-card .btn-start:disabled { opacity: .35; }
+.venue-card.is-locked > *:not(.vlock):not(.btn-start):not(.node-row) { opacity: .5; }
+.vlock { padding: 6px 8px; border-radius: var(--r); background: rgba(0,0,0,.55); border: 1px dashed var(--line); font: 800 10.5px/1.3 var(--font-ui); color: var(--hype); }
+.venue-card .btn-start { margin-top: 0; }
+/* v4: club night */
+.night-tag { grid-column: 1 / -1; font: 800 9px var(--font-ui); letter-spacing: .08em; color: var(--muted); } .night-tag b { color: var(--good); }
+.night-row { border-color: var(--hype); } .mix-coach.is-low { border-left-color: var(--bad); }
+/* v4: echo battle */
+.battle-turn { display: inline-block; padding: 5px 12px; border-radius: 999px; font: 900 13px/1 var(--font-ui); letter-spacing: .1em; background: rgba(0,0,0,.7); color: var(--muted); }
+.battle-turn:empty { display: none; } .battle-turn.you { background: var(--accent); color: var(--accent-ink); }
+.is-battle .stage-msg { justify-content: flex-start; padding-top: 26px; }
+.battle-score { position: absolute; left: 0; right: 0; top: 6px; text-align: center; font: 800 11px/1 var(--font-ui); letter-spacing: .08em; color: var(--ink); text-shadow: 0 1px 2px #000; pointer-events: none; display: none; }
+.is-battle.is-playing .battle-score { display: block; }
+/* v4: DJ move markers on the mixer sliders */
+.ghost-wrap { position: relative; }
+.ghost { position: absolute; top: 1px; bottom: 1px; width: 6px; margin-left: -3px; border-radius: 3px; background: var(--hype); box-shadow: 0 0 10px var(--hype); pointer-events: none; }
+.ghost[hidden] { display: none; }
+.ctrl.is-target { outline: 2px solid var(--hype); outline-offset: 2px; border-radius: var(--r); }
+.ctrl.is-target.is-ontarget { outline-color: var(--good); } .ctrl.is-ontarget .ghost { background: var(--good); box-shadow: 0 0 10px var(--good); }
+/* v4: Studio song builder, Quick Play */
+.studio-switch { display: none; flex: none; } .studio-switch button { min-height: 30px; padding: 4px 12px; white-space: nowrap; }
+.in-studio .studio-switch { display: flex; } .in-studio .hud, .in-studio .nowplaying { display: none; }
+.in-studio .topbar { justify-content: space-between; }
+.view-songs { grid-template-columns: 190px minmax(0, 1fr); gap: 8px; }
+.sg-col { display: flex; flex-direction: column; gap: 7px; min-height: 0; min-width: 0; padding: 8px; border-radius: var(--r-lg); border: 1px solid var(--line); background: var(--panel); }
+.sg-list { flex: 1; min-height: 0; overflow-y: auto; display: grid; gap: 5px; align-content: start; }
+.sg-item { display: grid; gap: 2px; padding: 7px 8px; min-height: 44px; border-radius: var(--r); border: 1px solid var(--line); background: var(--panel-hi); color: var(--ink); text-align: left; }
+.sg-item b { font: 800 12px/1.15 var(--font-ui); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .sg-item span { font: 600 10px/1.2 var(--font-ui); color: var(--muted); }
+.sg-item.is-on { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+.sg-empty { display: grid; gap: 10px; align-content: center; justify-items: start; padding: 16px; } .sg-empty[hidden] { display: none; }
+.sg-starters { display: flex; flex-wrap: wrap; gap: 6px; } .sg-starters .btn { min-height: 40px; padding: 6px 12px; font-size: 12px; }
+.sg-editor { display: grid; grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.25fr); gap: 8px; min-height: 0; } .sg-editor[hidden] { display: none; }
+.sg-settings { overflow-y: auto; } .sg-two { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.sg-settings .select { min-height: 32px; padding: 4px 8px; font-size: 12px; } .sg-settings input[type=range] { height: 28px; }
+.sg-mutes { display: flex; flex-wrap: wrap; gap: 4px; } .sg-mutes .btn { flex: 1; min-height: 30px; padding: 4px 6px; font-size: 10px; opacity: .5; text-decoration: line-through; }
+.sg-mutes .btn.is-on { opacity: 1; text-decoration: none; }
+.sg-head { display: flex; justify-content: space-between; align-items: baseline; } .sg-head b { font: 800 11px var(--font-ui); color: var(--muted); }
+.sg-rows { flex: 1; min-height: 60px; overflow-y: auto; display: grid; gap: 4px; align-content: start; }
+.sg-row { display: grid; grid-template-columns: 28px 1.2fr .9fr 1.2fr 28px 28px; gap: 4px; align-items: center; }
+.sg-row .select { min-height: 30px; padding: 2px 4px; font-size: 11px; min-width: 0; }
+.sg-n, .sg-x { min-height: 30px; padding: 0; border-radius: var(--r); border: 1px solid var(--line); background: var(--panel-hi); color: var(--ink); font: 800 11px var(--font-ui); }
+.sg-row.is-sel .sg-n { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); } .sg-x:disabled { opacity: .3; }
+.sg-arr .note { font-size: 10.5px; line-height: 1.3; }
+.sg-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; } .sg-actions .btn { min-height: 34px; padding: 2px 4px; font-size: 10.5px; }
+.quick-field .btn-row { display: flex; gap: 4px; } .quick-field #quick-open { flex: 1; min-width: 0; min-height: 34px; padding: 4px 8px; font-size: 10.5px; } #quick-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.quick-field #quick-exit { flex: none; width: 34px; min-height: 34px; padding: 0; }
+#quick-diff { margin: 8px 0 2px; } .quick-sub { margin-top: 8px; }
+@media (orientation: portrait) {
+  .view-songs { grid-template-columns: 1fr; overflow-y: auto; align-content: start; } .sg-side { max-height: 200px; }
+  .sg-editor { grid-template-columns: 1fr; } .sg-rows { max-height: none; overflow: visible; } .sg-settings { overflow: visible; }
+}
+
 /* v3: Mix tab (two decks + mixer), DJ school, beat trainer */
 .in-mix .hud, .in-mix .nowplaying { visibility: hidden; }
 .view-mix { grid-template-rows: 52px auto minmax(0, 1fr); gap: 5px; }
