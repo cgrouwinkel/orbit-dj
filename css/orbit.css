@@ -348,6 +348,24 @@ input[type=range]::-moz-range-thumb { width: 22px; height: 30px; border-radius: 
 .mix-simple .mx-tip { display: block; }
 .dj-pad[data-mode="padfx"] { font-size: 9px; line-height: 1.1; letter-spacing: 0; padding-left: 1px; padding-right: 1px; }
 .sheet.sheet-rigs { width: min(820px, 100%); }
+.sheet.sheet-midi { width: min(720px, 100%); }
+#midi-main:not([hidden]), #midi-unsupported:not([hidden]) { display: grid; gap: 12px; } #midi-main .note, #midi-main .field { margin: 0; } .midi-actions { padding-bottom: 4px; }
+.midi-status { display: flex; gap: 8px; align-items: center; font: 700 14px/1.3 var(--font-ui); }
+#midi-dot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--line); transition: background .06s; } #midi-dot.is-on { background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+.midi-last { margin: 0; font: 600 12px/1.3 var(--font-ui); color: var(--muted); } .midi-last code { color: var(--ink); font: 600 12px ui-monospace, Menlo, monospace; }
+.midi-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.midi-wizard { padding: 12px; border: 2px solid var(--accent); border-radius: var(--r); display: grid; gap: 8px; }
+.midi-ask { margin: 0; font: 800 19px/1.3 var(--font-ui); color: var(--ink); }
+.midi-meter { height: 6px; border-radius: 3px; background: var(--line-soft); overflow: hidden; } .midi-meter i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .1s; }
+.midi-flash { margin: 0; padding: 8px 10px; border-radius: 8px; background: rgba(255,255,255,.06); font: 700 13px/1.3 var(--font-ui); color: var(--accent); }
+.midi-list { display: grid; gap: 2px; }
+.midi-group { margin: 10px 0 2px; font: 800 11px/1.2 var(--font-ui); letter-spacing: .14em; color: var(--accent); }
+.midi-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr) auto auto; gap: 6px; align-items: center; padding: 3px 4px; border-radius: 6px; font: 700 13px/1.2 var(--font-ui); }
+.midi-row.is-learning { background: rgba(255,255,255,.08); outline: 2px solid var(--accent); }
+.midi-key { font: 600 12px/1.2 ui-monospace, Menlo, monospace; color: var(--muted); overflow-wrap: anywhere; }
+.midi-row .btn { min-height: 34px; padding: 4px 8px; } .midi-x { min-width: 34px; }
+.midi-share summary { cursor: pointer; font: 700 13px var(--font-ui); padding: 6px 0; }
+#midi-json { width: 100%; font: 12px/1.4 ui-monospace, Menlo, monospace; background: rgba(0,0,0,.3); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 8px; }
 .rig-list { display: grid; gap: 10px; } .rig { padding: 10px 12px 12px; border: 1px solid var(--line-soft); border-radius: var(--r); background: rgba(255,255,255,.03); display: grid; gap: 6px; }
 .rig h3 { margin: 0; font: 800 15px/1.2 var(--font-display, var(--font-ui)); letter-spacing: .06em; color: var(--ink); } .rig .btn { justify-self: start; min-height: 36px; }
 @media (min-width: 700px) { .rig-list { grid-template-columns: 1fr 1fr; } }

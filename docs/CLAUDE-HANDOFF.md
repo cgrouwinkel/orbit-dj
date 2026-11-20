@@ -1,4 +1,4 @@
-# ORBIT DJ — Claude handoff (after v4.3.0, 2026-11-20)
+# ORBIT DJ — Claude handoff (after v4.4.0, 2026-11-20)
 
 ## Source of truth
 - This source bundle (`ORBIT-DJ-v2.1.0-source.zip`) replaces earlier bundles and `ORBIT-Arcade-Final-Prototype.zip`.
@@ -37,6 +37,16 @@ Sounds: `python3 tools/make_sounds.py` regenerates `sounds/` and `js/sounds-mani
 - She personally wants to learn the beat pad, but to sell the idea the product should lean on **gamifying standard two-deck controller mixing**. Treat the Mix tab's lessons, gigs and Club Night as the core game from here; keep the beat pad as the second track.
 - Research note: gamified pad-drumming training is an established product category (Melodics, founded 2014, partnered with Pioneer DJ). One search did not surface an equivalent game for two-deck mixing; that is not proof none exists.
 - Tone she asked for: humour. Most DJs start out messing about at home for their friends; the first venue is that, and the first locked-in streak is the "ohhhh" moment.
+
+## v4.4 real controller (js/midi.js), prototype
+- Owner will demo on a borrowed laptop (her boyfriend's). Her own devices: iPhone only; her work laptop is locked down and must not be used.
+- Web MIDI only exists in Chrome, Edge and Firefox on computers. `O.midi.supported` is false in Safari and on iPhone; the sheet says so.
+- MIDI learn, no presets. `CONTROLS[]` lists 45 mappable controls; `WIZARD` is the 31 that prompt (pads 2–8 auto-fill from pad 1). Bindings: `{ keys: [msgKey], inv?, enc?, auto? }` with keys like `n:ch:note`, `c:ch:cc`, `p:ch:0`; stored under `orbitV44Midi`.
+- During the wizard a message already bound to another control is ignored (a hand still on the last control); a single LEARN takes it over.
+- Absolute controls use soft takeover (`picked`), re-armed when the screen or SYNC moves the value.
+- Routing: on the Play tab only pads 1–4 act (`O.ui.lanePress`); elsewhere everything drives the decks.
+- `tests/qa-midi.js` injects a fake MIDI input and a made-up Pioneer-like layout. A real controller's quirks (jog resolution, shift layers, pad mode channels, LEDs) are untested.
+- Next for the demo: a preset for whichever controller she borrows, from its published MIDI message list; MIDI out for button lights.
 
 ## v4.3 live-show scene (js/scene.js)
 - Both themes since v4.3.1. `drawHighway()` in ui.js reserves a strip (`bandH`, 20 % of the canvas, 32 to 84 pt, none when the canvas is under 150 pt tall) and calls `O.scene.draw(c, W, H, { top, horizon, aero }, G, reduce)` before the lanes; the highway then gets a ~90 % dark surface (navy in Aero) so the room shows through slightly. `topY` moves down by the strip, so notes travel a shorter distance.

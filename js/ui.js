@@ -895,6 +895,7 @@
     if (id === 'ov-brief') G.stopDemo();
     if (id === 'ov-calib') stopCalib();
     try { if (el._return) el._return.focus({ preventScroll: true }); } catch (e) {}
+    O.emit('overlay-closed', id);
   }
   $$('.overlay').forEach(ov => {
     ov.addEventListener('click', e => { if (e.target.closest('[data-close]')) closeOverlay(ov.id); else if (e.target === ov && !['ov-audio', 'ov-intro', 'ov-tutsong', 'ov-tutstep'].includes(ov.id) && !(ov.id === 'ov-map' && tut.on)) closeOverlay(ov.id); });
@@ -1276,5 +1277,7 @@
   $('#ctrl-feedback').textContent = G.feedback || '';
   resizeCanvases(); updateStageMsg();
   if (!S.get('orbitV22Tutorial', false)) openOverlay('ov-intro'); // new players land straight in the tutorial
-  O.ui = { career: { CAREER, careerStars, venueOpen, venueStars, rankFor, checkRewards, setSkin: k => { skin = k; } }, tutorial: tut, tutStart, tutEnd, showView, openBrief, openOverlay, closeOverlay, setTheme, setMotion, wake, get view() { return view; }, calibClicks: () => (calib ? calib.clicks.slice() : null) };
+  // a real controller's pads on the Play tab (js/midi.js): same as touching the lane pads
+  const lanePress = (i, down, ts) => { if (down) { padDown(i); G.tap(i, O.eventTime({ timeStamp: ts })); } else { padUp(i); G.release(i); } };
+  O.ui = { lanePress, career: { CAREER, careerStars, venueOpen, venueStars, rankFor, checkRewards, setSkin: k => { skin = k; } }, tutorial: tut, tutStart, tutEnd, showView, openBrief, openOverlay, closeOverlay, setTheme, setMotion, wake, get view() { return view; }, calibClicks: () => (calib ? calib.clicks.slice() : null) };
 })();

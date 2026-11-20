@@ -1,5 +1,26 @@
 # ORBIT DJ — Changelog
 
+## v4.4.0 — 2026-11-20 (prototype: a real DJ controller over USB)
+
+Owner request: a prototype of real controller support, to demo on a borrowed laptop. Works in Chrome, Edge or Firefox on a computer (Web MIDI). Safari and every iPhone browser have no Web MIDI, so on the phone the sheet explains that instead.
+
+### Setup → Real controller (beta)
+- **CONNECT** asks the browser for MIDI access and lists the controllers it finds. Plugging one in later is picked up.
+- **LEARN EVERYTHING** walks through 31 steps ("Press PLAY on the LEFT deck", "Spin the jog wheel…", "Move the tempo fader to its FASTER end") and stores what each control sends. SKIP for controls the hardware does not have, BACK, STOP. Any single control can be re-learned from the list.
+- Works with any class-compliant controller, no preset needed. Pads 2 to 8 are filled in from pad 1 when they send consecutive notes. 14-bit knobs and faders are read by their coarse half. The tempo fader's direction is taken from where the player leaves it. The jog's encoding (centre-64 or signed) is detected while it spins, and its side and top both count.
+- **Soft takeover:** a knob or fader does nothing until it meets the value on screen, so nothing jumps when the hardware and the screen disagree.
+- Jog wheel speed (slow / normal / fast). Copy, load and clear a mapping as text. The mapping is saved in the browser, and the controller reconnects by itself where MIDI was already allowed.
+- A last-message readout and activity light for checking a controller live.
+
+### What the controller does
+- **Mix tab:** PLAY / PAUSE, CUE (club-player behaviour: a press while paused sets the cue, holding previews), SYNC, LOOP, jog (bends while playing, scrubs with the top touched or while paused), tempo, 8 pads in the current pad mode, TRIM, HI / MID / LOW, FILTER, channel faders, headphone cue, crossfader. These call the same deck functions as the screen, so lessons, gigs and Club Night count them. PLAY on an empty deck loads a track.
+- **Play tab:** pads 1 to 4 of either deck play the four lanes, with the same timing as touch. The rest of the controller rests there.
+
+### Not done
+- No lights on the controller (no MIDI out yet).
+- No ready-made preset for any specific controller; every mapping comes from learning.
+- Never tried with real hardware: all tests use a simulated controller.
+
 ## v4.3.1 — 2026-11-20 (Cyber Aero gets the live show too)
 
 Owner feedback: the app opens in Cyber Aero, so the v4.3.0 room never showed up for her. The scene now draws in both themes, in each theme's own style.

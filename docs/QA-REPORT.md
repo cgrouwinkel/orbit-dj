@@ -1,4 +1,21 @@
-# ORBIT DJ — QA report (v4.3.1)
+# ORBIT DJ — QA report (v4.4.0)
+
+## v4.4.0 automated results (real controller prototype)
+
+| Suite | Result |
+|---|---|
+| `tests/qa-midi.js` (new: simulated USB controller) | 22 / 22 |
+| `tests/qa-mix.js` | 84 / 84 |
+| `tests/qa-v4.js` | 51 / 51 |
+| `tests/qa.js` | 112 / 112 |
+| `tests/phone-layout.js` | 10 / 10 screens |
+
+**Date:** 2026-11-20 · **Tested:** the repo root served locally, headless Chrome via Playwright. `tests/qa-midi.js` replaces the browser's MIDI access with a fake input and sends the messages of a made-up controller laid out like common Pioneer models (notes for buttons, CCs for knobs with 14-bit pairs, a centre-64 jog with separate side and top messages, pads on their own channel, a tempo fader whose + end sends 0).
+
+**Not tested:** any real controller. Real hardware can differ in jog resolution, shift layers, pad-mode channels and button messages; the learn flow is meant to absorb most of that, but only a real device will show it. Also untested: Firefox, Edge, and the browser's real MIDI permission prompt.
+
+What the checks cover: the unsupported-browser message; connect and device name; the 31-step learn wizard (buttons, auto-filled pads, 14-bit knobs, tempo direction, jog encoding, skipping); playing the decks (auto-load on PLAY, soft takeover and re-pickup on the tempo fader, faders, EQ centre, crossfader, headphone cue, jog bend and scrub, CUE set and preview, hot cues, SYNC, LOOP); a lesson step completed from the controller; Play-tab pads on the lanes; re-learning a used message; copy / clear / load; reconnect after reload.
+
 
 ## v4.3.1 automated results (live-show scene in Cyber Aero)
 

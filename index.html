@@ -399,6 +399,7 @@
           <button class="btn" id="set-intro">Replay tutorial</button>
           <button class="btn" id="set-map">Controller map</button>
           <button class="btn" id="set-rigs">Rigs: the gear behind the sound</button>
+          <button class="btn" id="set-midi">Real controller (beta)</button>
           <button class="btn btn-danger" id="set-reset">Reset career progress</button>
           <p class="note" id="version-line"></p>
         </div>
@@ -475,6 +476,42 @@
       <h2 class="tut-h" id="rigs-title">THE GEAR BEHIND THE SOUND</h2>
       <p class="note">Four kinds of rig behind UK garage, grime, house and rap production, and where each one lives in ORBIT. Gear is as reported in interviews and live footage; artists change their setups.</p>
       <div class="rig-list" id="rig-list"></div>
+    </div>
+  </div>
+
+  <div class="overlay" id="ov-midi" role="dialog" aria-modal="true" aria-labelledby="midi-title" hidden>
+    <div class="sheet sheet-tut sheet-midi">
+      <button class="icon-btn sheet-x" data-close aria-label="Close"><svg><use href="#i-x"/></svg></button>
+      <div class="eyebrow">BETA</div>
+      <h2 class="tut-h" id="midi-title">REAL CONTROLLER</h2>
+      <div id="midi-unsupported" hidden>
+        <p class="note">This browser cannot talk to MIDI devices. Safari, and every browser on iPhone and iPad, leave that part of the web out.</p>
+        <p class="note">Open ORBIT in <b>Chrome or Edge on a computer</b>, plug the controller in by USB, and come back here. Your progress on this phone stays on this phone.</p>
+      </div>
+      <div id="midi-main" hidden>
+        <p class="note">Works with any USB DJ controller. Tap CONNECT, then LEARN EVERYTHING and move each control when asked. On the Mix tab the controller plays the decks; on the Play tab, pads 1 to 4 play the lanes.</p>
+        <div class="midi-status"><i id="midi-dot" aria-hidden="true"></i><span id="midi-status"></span></div>
+        <p class="midi-last"><span>Last message:</span> <code id="midi-last">none yet</code></p>
+        <div class="midi-actions"><button class="btn-start small" id="midi-connect"><span>CONNECT</span></button><button class="btn is-on" id="midi-learn-all">LEARN EVERYTHING</button></div>
+        <div class="midi-wizard" id="midi-wizard" hidden>
+          <div class="eyebrow" id="midi-step"></div>
+          <p class="midi-ask" id="midi-ask" aria-live="polite"></p>
+          <div class="midi-meter"><i id="midi-bar"></i></div>
+          <p class="note" id="midi-wait"></p>
+          <div class="midi-actions"><button class="btn" id="midi-back">BACK</button><button class="btn" id="midi-skip">SKIP</button><button class="btn" id="midi-stop">STOP</button></div>
+        </div>
+        <p class="midi-flash" id="midi-flash" aria-live="polite" hidden></p>
+        <div class="field"><span class="field-label">JOG WHEEL SPEED</span>
+          <div class="seg" id="midi-jog" role="radiogroup" aria-label="Jog wheel speed"><button role="radio" data-jog="slow">SLOW</button><button role="radio" data-jog="normal">NORMAL</button><button role="radio" data-jog="fast">FAST</button></div>
+        </div>
+        <p class="field-label" id="midi-count"></p>
+        <div class="midi-list" id="midi-list"></div>
+        <details class="midi-share"><summary>Save or load a mapping</summary>
+          <p class="note">COPY MAPPING puts it on the clipboard, so you can keep it or move it to another computer. To load one, paste it here and tap LOAD.</p>
+          <textarea id="midi-json" rows="3" spellcheck="false" aria-label="Mapping text"></textarea>
+          <div class="midi-actions"><button class="btn" id="midi-copy">COPY MAPPING</button><button class="btn" id="midi-apply">LOAD</button><button class="btn btn-danger" id="midi-clear">CLEAR ALL</button></div>
+        </details>
+      </div>
     </div>
   </div>
 
@@ -623,6 +660,7 @@
 <script src="js/school.js"></script>
 <script src="js/scene.js"></script>
 <script src="js/ui.js"></script>
+<script src="js/midi.js"></script>
 <script src="js/mixui.js"></script>
 <script src="js/songs.js"></script>
 <script src="js/night.js"></script>
