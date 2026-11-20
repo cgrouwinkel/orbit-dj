@@ -15,7 +15,7 @@
 
   const saved = S.get(KEY, {}) || {};
   const blankPatterns = () => SLOTS.reduce((o, s) => { o[s] = { bars: 1, events: [] }; return o; }, {});
-  const BP = (O.beatpad = {
+  const BP = (O.beatpad = { fx: 'off',
     KITS, SLOTS,
     kit: KITS[saved.kit] ? saved.kit : 'dusty',
     bpm: O.clamp(Number(saved.bpm) || 90, 60, 180),
@@ -55,6 +55,7 @@
   const lastVoice = {};
   function strike(i, t, vel, tune, dest) {
     const c = E.ctx; if (!c || c.state !== 'running') return;
+    if (BP.fx !== 'off' && (!fxg || fxg.gen !== E.generation)) routeFx();
     const p = BP.param(i);
     if (DRUM_KITS.includes(BP.kit) && CHOKE[i] !== undefined) { const v = lastVoice[CHOKE[i]]; if (v && v.gain) { try { v.gain.gain.cancelScheduledValues(t); v.gain.gain.setTargetAtTime(0, Math.max(t, c.currentTime), 0.008); } catch (e) {} } }
     const v = Synth.kit(c, dest || E.nodes.sampler, BP.kit, i, t, { vel: O.clamp(vel * p.level, 0, 1.5), tune: p.tune + (tune || 0), decay: p.decay });
@@ -62,6 +63,30 @@
     O.emit('bp-hit', { pad: i, at: t, vel });
   }
   BP.strike = strike;
+
+  // ---------- pad bus effects, in the spirit of the classic lo-fi samplers ----------
+  // VINYL: soft saturation with the top rolled off. LO-FI: coarse bit depth and a narrow band. Live only (not in the WAV bounce).
+  const FXS = ['off', 'vinyl', 'lofi'];
+  let fxg = null;
+  const curve = f => { const n = 4096, c = new Float32Array(n); for (let i = 0; i < n; i++) c[i] = f(i / (n - 1) * 2 - 1); return c; };
+  function routeFx() {
+    const c = E.ctx, n = E.nodes; if (!c || !n) return;
+    if (!fxg || fxg.gen !== E.generation) {
+      fxg = { gen: E.generation, shape: c.createWaveShaper(), hp: c.createBiquadFilter(), lp: c.createBiquadFilter(), out: c.createGain() };
+      fxg.hp.type = 'highpass'; fxg.lp.type = 'lowpass';
+      fxg.shape.connect(fxg.hp); fxg.hp.connect(fxg.lp); fxg.lp.connect(fxg.out); fxg.out.connect(n.master);
+    }
+    try { n.sampler.disconnect(); } catch (e) {}
+    if (BP.fx === 'off') { n.sampler.connect(n.master); return; }
+    const lo = BP.fx === 'lofi';
+    fxg.shape.curve = lo ? curve(x => Math.round(x * 40) / 40) : curve(x => Math.tanh(x * 1.7) / Math.tanh(1.7));
+    fxg.shape.oversample = lo ? 'none' : '2x';
+    fxg.hp.frequency.value = lo ? 130 : 40; fxg.lp.frequency.value = lo ? 4200 : 7800; fxg.lp.Q.value = lo ? 1.1 : 0.7; fxg.out.gain.value = lo ? 1.1 : 0.74; // level-matched to the dry pads by peak
+    n.sampler.connect(fxg.shape);
+  }
+  BP.FXS = FXS;
+  BP.setFx = function (m) { BP.fx = FXS.includes(m) ? m : 'off'; routeFx(); say(BP.fx === 'off' ? 'Pad FX off.' : BP.fx === 'vinyl' ? 'VINYL: warm and rounded, like a sampled record.' : 'LO-FI: crushed and narrow, like an early sampler.'); O.emit('bp-change', 'fx'); };
+  O.on('audio-reset', () => { fxg = null; });
 
   // Velocity from where the pad is touched (top = loud), or full level.
   BP.velocityFromY = frac => (BP.fullLevel ? 1 : O.clamp(1.05 - 0.6 * frac, 0.4, 1));

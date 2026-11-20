@@ -10,7 +10,7 @@ function report(name, what, a) { const scrollOk = a.pageScroll <= 1 && (what ===
   const b = await chromium.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', args: ['--autoplay-policy=no-user-gesture-required'] });
   for (const [name, vp] of [['land', { width: 737, height: 287 }], ['port', { width: 395, height: 702 }]]) {
     const ctx = await b.newContext({ viewport: vp, hasTouch: true, isMobile: true, deviceScaleFactor: 2 });
-    await ctx.addInitScript(() => { try { localStorage.setItem('orbitV22Tutorial', 'true'); localStorage.setItem('orbitV4UnlockAll', 'true'); localStorage.setItem('orbitV4RotateTip', 'true'); } catch (e) {} });
+    await ctx.addInitScript(() => { try { localStorage.setItem('orbitV22Tutorial', 'true'); localStorage.setItem('orbitV4UnlockAll', 'true'); localStorage.setItem('orbitV4RotateTip', 'true'); localStorage.setItem('orbitV42MixLevel', '"pro"'); } catch (e) {} });
     const page = await ctx.newPage(); const errs = []; page.on('pageerror', e => errs.push(e.message));
     await page.goto(BASE + '/index.html'); await page.waitForTimeout(400);
     const audit = (sel) => page.evaluate((sel) => {

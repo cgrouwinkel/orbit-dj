@@ -2,25 +2,26 @@
  * Two decks play pre-rendered original tracks (tracks/*.mp3) through a DJ mixer:
  *   deck -> trim -> 3-band EQ -> filter -> channel fader -> crossfader -> master
  * with a post-fader FX send (echo / reverb / flanger), headphone split cue, loops, hot cues,
- * loop roll with slip, beat jump, jog nudge / scrub, tempo fader (no key lock: pitch follows
- * tempo, like vinyl) and SYNC. Positions are computed from the audio clock.
+ * loop roll with slip, beat jump, jog nudge / scrub, tempo fader with a range switch (no key lock:
+ * pitch follows tempo, like vinyl), SYNC (also at half / double time) and pad FX: brake, backspin,
+ * reload, echo out, momentary kills. Positions are computed from the audio clock.
  */
 (function () {
   'use strict';
   const O = window.ORBIT, E = O.engine, Synth = O.synth;
   const TRACKS = window.ORBIT_TRACKS || [];
-  const RANGE = 0.10; // tempo fader: plus or minus 10 %
+  let RANGE = 0.10; // tempo fader: plus or minus 10 % by default; D.setRange switches to 6 or 16 %
   const clamp = O.clamp, frac = x => x - Math.floor(x);
   const wrapHalf = x => { x = frac(x); return x > 0.5 ? x - 1 : x; };
 
   function newDeck(i) {
     return { i, name: 'AB'[i], track: null, buf: null, peaks: null, loading: false, playing: false, pos: 0, anchor: 0, rate: 1, tempo: 0, bend: 0, bendAt: 0,
-      sync: false, cue: 0, hot: [null, null, null, null, null, null, null, null], loop: null, loopBeats: 4, slip: null, src: null, cueHeld: false,
+      sync: false, syncM: 1, hold: {}, cue: 0, hot: [null, null, null, null, null, null, null, null], loop: null, loopBeats: 4, slip: null, src: null, cueHeld: false,
       ch: { gain: 0.5, hi: 0.5, mid: 0.5, low: 0.5, filter: 0.5, fader: 1, cue: false, fx: false }, padMode: 'hotcue',
-      stats: { plays: 0, cuePreview: 0, cueReturn: 0, hotJumps: 0, rolls: 0, jumps: 0, samples: 0, nudges: 0, scrubs: 0, startAt: null } };
+      stats: { plays: 0, cuePreview: 0, cueReturn: 0, hotJumps: 0, rolls: 0, jumps: 0, samples: 0, nudges: 0, scrubs: 0, brakes: 0, spins: 0, reloads: 0, echoOuts: 0, kills: 0, startAt: null } };
   }
   const D = (O.decks = {
-    TRACKS, RANGE, decks: [newDeck(0), newDeck(1)],
+    TRACKS, RANGE, RANGES: [0.06, 0.10, 0.16], decks: [newDeck(0), newDeck(1)],
     mixer: { xf: 0.5, master: 0.8, split: false, fx: { type: 'echo', beats: 1, amount: 0.5 } },
     vinyl: false, quantize: true, syncLocked: false, g: null
   });
@@ -71,6 +72,9 @@
     g.lfo = c.createOscillator(); g.lfo.frequency.value = 0.25; g.lfoAmt = c.createGain(); g.lfoAmt.gain.value = 0.0028;
     g.lfo.connect(g.lfoAmt); g.lfoAmt.connect(g.flDelay.delayTime); try { g.lfo.start(); } catch (e) {}
     g.flIn.connect(g.flDelay); g.flDelay.connect(g.flFb); g.flFb.connect(g.flDelay); g.flDelay.connect(g.fxOut);
+    g.relIn = c.createGain(); g.relDelay = c.createDelay(2); g.relFb = c.createGain(); g.relFb.gain.value = 0.62;
+    g.relTone = c.createBiquadFilter(); g.relTone.type = 'lowpass'; g.relTone.frequency.value = 3600;
+    g.relIn.connect(g.relDelay); g.relDelay.connect(g.relTone); g.relTone.connect(g.relFb); g.relFb.connect(g.relDelay); g.relTone.connect(g.sum);
     for (let i = 0; i < 2; i++) {
       const n = { in: c.createGain(), trim: c.createGain(), low: c.createBiquadFilter(), mid: c.createBiquadFilter(), hi: c.createBiquadFilter(),
         lp: c.createBiquadFilter(), hp: c.createBiquadFilter(), fader: c.createGain(), xf: c.createGain(), cue: c.createGain(), fx: c.createGain(), meter: c.createAnalyser() };
@@ -78,6 +82,7 @@
       n.hi.type = 'highshelf'; n.hi.frequency.value = 3600; n.lp.type = 'lowpass'; n.hp.type = 'highpass'; n.meter.fftSize = 512;
       n.in.connect(n.trim); n.trim.connect(n.low); n.low.connect(n.mid); n.mid.connect(n.hi); n.hi.connect(n.lp); n.lp.connect(n.hp);
       n.hp.connect(n.fader); n.fader.connect(n.xf); n.xf.connect(g.sum); n.xf.connect(n.fx); n.fx.connect(g.fxIn);
+      n.rel = c.createGain(); n.rel.gain.value = 0; n.xf.connect(n.rel); n.rel.connect(g.relIn);
       n.hp.connect(n.cue); n.cue.connect(g.cueBus); n.hp.connect(n.meter);
       g.ch.push(n);
     }
@@ -97,11 +102,11 @@
     const g = D.g, c = E.ctx; if (!g || !c) return;
     const t = c.currentTime, fx = D.mixer.fx;
     D.decks.forEach(d => {
-      const n = g.ch[d.i], k = d.ch;
-      setP(n.trim.gain, trimGain(k.gain), t, snap); setP(n.low.gain, eqDb(k.low), t, snap); setP(n.mid.gain, eqDb(k.mid), t, snap); setP(n.hi.gain, eqDb(k.hi), t, snap);
+      const n = g.ch[d.i], k = d.ch, h = d.hold; // h: pads held in PAD FX mode (momentary kills)
+      setP(n.trim.gain, trimGain(k.gain), t, snap); setP(n.low.gain, eqDb(h.low ? 0 : k.low), t, snap); setP(n.mid.gain, eqDb(k.mid), t, snap); setP(n.hi.gain, eqDb(h.hi ? 0 : k.hi), t, snap);
       setP(n.lp.frequency, lpHz(k.filter), t, snap); setP(n.hp.frequency, hpHz(k.filter), t, snap);
       const q = Math.abs(k.filter - 0.5) > 0.03 ? 2.2 : 0.7; setP(n.lp.Q, q, t, snap); setP(n.hp.Q, q, t, snap);
-      setP(n.fader.gain, faderGain(k.fader), t, snap); setP(n.xf.gain, xfGain(d.i, D.mixer.xf), t, snap);
+      setP(n.fader.gain, h.mute ? 0 : faderGain(k.fader), t, snap); setP(n.xf.gain, xfGain(d.i, D.mixer.xf), t, snap);
       setP(n.cue.gain, k.cue ? 1 : 0, t, snap); setP(n.fx.gain, k.fx ? fx.amount : 0, t, snap);
     });
     setP(g.master.gain, Math.pow(D.mixer.master / 0.8, 1.6), t, snap);
@@ -163,7 +168,7 @@
       d.track = Object.assign({}, T, { first: T.imported ? T.first : r.first, beat: 60 / T.bpm }); // imported audio: beat 1 comes from the tempo analysis
       d.buf = r.buf; d.peaks = r.peaks;
       d.pos = d.cue = r.first; d.hot = d.hot.map(() => null); d.loop = null; d.loopBeats = 4; d.slip = null; d.tempo = 0; d.bend = 0; d.sync = false; d.rate = 1;
-      d.stats = { plays: 0, cuePreview: 0, cueReturn: 0, hotJumps: 0, rolls: 0, jumps: 0, samples: 0, nudges: 0, scrubs: 0, startAt: null };
+      d.stats = { plays: 0, cuePreview: 0, cueReturn: 0, hotJumps: 0, rolls: 0, jumps: 0, samples: 0, nudges: 0, scrubs: 0, brakes: 0, spins: 0, reloads: 0, echoOuts: 0, kills: 0, startAt: null }; d.hold = {};
       return true;
     } catch (e) { O.toast('Could not load the track. Check your connection and try again.'); return false; }
     finally { d.loading = false; O.emit('deck', { deck: i, type: 'loaded' }); }
@@ -229,7 +234,7 @@
     if (d.pos >= d.buf.duration - 0.2) d.pos = d.cue;
     // With SYNC on, a start is quantized: it lands on the other deck's nearest beat.
     const o = D.other(d); let delay = 0;
-    if (d.sync && o.playing && o.track) { const adj = wrapHalf(D.beatOf(o) - D.beatOf(d, d.pos)) * d.track.beat; if (adj < 0) delay = -adj / d.rate; else d.pos += adj; }
+    if (d.sync && o.playing && o.track) { const adj = wrapHalf(D.beatOf(o) * d.syncM - D.beatOf(d, d.pos)) * d.track.beat; if (adj < 0) delay = -adj / d.rate; else d.pos += adj; }
     d.playing = true; startSrc(d, delay);
     d.stats.plays++; d.stats.startAt = { pos: d.pos, at: d.anchor };
     O.emit('deck', { deck: d.i, type: 'play' });
@@ -276,16 +281,24 @@
     const o = D.other(d); if (o.sync && o.track && d.track) follow(o);
     O.emit('deck', { deck: d.i, type: 'tempo' });
   };
-  function follow(d) { const o = D.other(d); d.tempo = clamp((D.bpm(o) / d.track.bpm - 1) / RANGE, -1, 1); applyRate(d); O.emit('deck', { deck: d.i, type: 'tempo' }); }
-  D.canSync = function (d) { const o = D.other(d); return !!(d.track && o.track && Math.abs(D.bpm(o) / d.track.bpm - 1) <= RANGE + 1e-6); };
+  // SYNC matches the other deck's tempo, or half / double of it when that is the closer fit (70 against 140, as on club players).
+  const syncMult = d => { const r = D.bpm(D.other(d)) / d.track.bpm; return [1, 2, 0.5].reduce((best, m) => (Math.abs(r * m - 1) < Math.abs(r * best - 1) - 1e-9 ? m : best), 1); };
+  function follow(d) { const o = D.other(d); d.syncM = syncMult(d); d.tempo = clamp((D.bpm(o) * d.syncM / d.track.bpm - 1) / RANGE, -1, 1); applyRate(d); O.emit('deck', { deck: d.i, type: 'tempo' }); }
+  D.canSync = function (d) { const o = D.other(d); return !!(d.track && o.track && Math.abs(D.bpm(o) * syncMult(d) / d.track.bpm - 1) <= RANGE + 1e-6); };
+  D.setRange = function (r) { // tempo fader range; the decks keep the tempo they are playing at
+    if (!D.RANGES.includes(r) || r === RANGE) return;
+    const old = RANGE; RANGE = D.RANGE = r;
+    D.decks.forEach(d => { d.tempo = clamp(d.tempo * old / r, -1, 1); applyRate(d); O.emit('deck', { deck: d.i, type: 'range' }); });
+  };
   D.toggleSync = function (d) {
     if (d.sync) { d.sync = false; O.emit('deck', { deck: d.i, type: 'sync' }); return true; }
     if (D.syncLocked) { O.toast('No SYNC at this gig. Match the tempo by hand.'); return false; }
     const o = D.other(d);
     if (!d.track || !o.track) { O.toast('Load a track on both decks first.'); return false; }
-    if (!D.canSync(d)) { O.toast('These tempos are more than 10% apart. Pick a closer track.'); return false; }
+    if (!D.canSync(d)) { O.toast('These tempos are more than ' + Math.round(RANGE * 100) + '% apart. Pick a closer track' + (RANGE < 0.16 ? ', or widen the tempo range (tap ±' + Math.round(RANGE * 100) + ').' : '.')); return false; }
     d.sync = true; follow(d);
-    if (o.playing && d.playing) D.seek(d, D.posOf(d) + wrapHalf(D.beatOf(o) - D.beatOf(d)) * d.track.beat, true);
+    if (o.playing && d.playing) D.seek(d, D.posOf(d) + wrapHalf(D.beatOf(o) * d.syncM - D.beatOf(d)) * d.track.beat, true);
+    if (d.syncM !== 1) O.toast('SYNC at ' + (d.syncM === 2 ? 'double' : 'half') + ' time: ' + D.bpm(d).toFixed(0) + ' against ' + D.bpm(o).toFixed(0) + ' BPM.');
     O.emit('deck', { deck: d.i, type: 'sync' });
     return true;
   };
@@ -378,6 +391,57 @@
     d.stats.hotJumps++; D.seek(d, d.hot[n]); if (!d.playing) D.play(d);
   };
 
+  // ---------- pad FX: release moves (the track stops) and momentary kills ----------
+  // BRAKE: the platter slows to a stop, like switching a turntable off.
+  D.brake = function (d) {
+    if (!d.playing || !d.src || d.braking) return false;
+    const c = E.ctx, t = c.currentTime, dur = 0.85, p = D.posOf(d, t), r = d.rate, src = d.src;
+    d.braking = true;
+    try { const pr = src.node.playbackRate; pr.cancelScheduledValues(t); pr.setValueAtTime(r, t); pr.linearRampToValueAtTime(0.02, t + dur); src.g.gain.setValueAtTime(1, t + dur - 0.1); src.g.gain.linearRampToValueAtTime(0, t + dur); } catch (e) {}
+    d.stats.brakes++; O.emit('deck', { deck: d.i, type: 'brake' });
+    setTimeout(() => { d.braking = false; if (!d.playing || d.src !== src) return; D.pause(d); d.pos = clamp(p + r * dur / 2, 0, d.buf.duration - 0.05); O.emit('deck', { deck: d.i, type: 'seek' }); }, dur * 1000);
+    return true;
+  };
+  // A short reversed slice that slows down: the sound of a platter pulled back by hand.
+  function spinSound(d, p) {
+    const g = graph(), c = E.ctx; if (!g) return;
+    const sr = d.buf.sampleRate, n = Math.floor(Math.min(1.6, p) * sr); if (n < sr * 0.2) return;
+    const i0 = Math.floor(p * sr) - n, rb = c.createBuffer(d.buf.numberOfChannels, n, sr);
+    for (let ch = 0; ch < d.buf.numberOfChannels; ch++) { const s = d.buf.getChannelData(ch), o = rb.getChannelData(ch); for (let k = 0; k < n; k++) o[k] = s[i0 + n - 1 - k] || 0; }
+    const src = c.createBufferSource(), sg = c.createGain(), t = c.currentTime + 0.012, dur = 0.7;
+    src.buffer = rb; src.playbackRate.setValueAtTime(3.2, t); src.playbackRate.exponentialRampToValueAtTime(0.6, t + dur);
+    sg.gain.setValueAtTime(0, t); sg.gain.linearRampToValueAtTime(0.9, t + 0.01); sg.gain.setValueAtTime(0.9, t + dur - 0.12); sg.gain.linearRampToValueAtTime(0, t + dur);
+    src.connect(sg); sg.connect(g.ch[d.i].in); src.start(t); src.stop(t + dur + 0.02);
+    src.onended = () => { try { src.disconnect(); sg.disconnect(); } catch (e) {} };
+  }
+  // SPIN: backspin, then silence where the track was. RELOAD: backspin and return to the cue point, ready to drop again
+  // (the "wheel-up" of grime and UK garage sets).
+  D.spin = function (d, reload) {
+    if (!d.buf || !E.isRunning()) return false;
+    const p = D.posOf(d);
+    if (d.playing) D.pause(d);
+    spinSound(d, p);
+    if (reload) { d.pos = d.cue; d.stats.reloads++; } else d.stats.spins++;
+    O.emit('deck', { deck: d.i, type: reload ? 'reload' : 'spin' });
+    return true;
+  };
+  D.reload = d => D.spin(d, true);
+  // ECHO OUT: one beat of the track is fed into a half-beat echo, then the track stops and the echo rings on.
+  D.echoOut = function (d) {
+    const g = graph(); if (!g || !d.playing || d.echoing) return false;
+    const c = E.ctx, t = c.currentTime, n = g.ch[d.i], beat = 60 / Math.max(40, D.bpm(d));
+    d.echoing = true;
+    g.relDelay.delayTime.setValueAtTime(clamp(beat / 2, 0.05, 1.5), t);
+    n.rel.gain.cancelScheduledValues(t); n.rel.gain.setTargetAtTime(1, t, 0.008);
+    d.stats.echoOuts++; O.emit('deck', { deck: d.i, type: 'echo-out' });
+    setTimeout(() => { d.echoing = false; try { n.rel.gain.setTargetAtTime(0, E.ctx.currentTime, 0.01); } catch (e) {} if (d.playing) D.pause(d); }, beat * 1000);
+    return true;
+  };
+  D.holdFx = function (d, name, on) { // low / hi / mute while a pad is held
+    if (on) { d.hold[name] = true; d.stats.kills++; } else d.hold = {};
+    applyAll(false); O.emit('deck', { deck: d.i, type: 'hold' });
+  };
+
   // ---------- sampler pads (shared one-shots through the master) ----------
   const fx = n => O.assets.fxPath(n), kit = (k, i) => (O.assets.kitPaths(k) || [])[i];
   const SAMPLER = [
@@ -397,8 +461,10 @@
     loop: { label: 'LOOP', sizes: [1 / 4, 1 / 2, 1, 2, 4, 8, 16, 32] },
     roll: { label: 'ROLL', sizes: [1 / 16, 1 / 8, 1 / 4, 1 / 2, 1, 2, 4, 8] },
     jump: { label: 'JUMP', sizes: [-1, 1, -4, 4, -8, 8, -16, 16] },
-    sampler: { label: 'SAMPLER', pads: SAMPLER.map(s => s.name) }
+    sampler: { label: 'SAMPLER', pads: SAMPLER.map(s => s.name) },
+    padfx: { label: 'PAD FX', pads: ['BRAKE', 'SPIN', 'RELOAD', 'ECHO OUT', 'LOW KILL', 'HI KILL', 'MUTE', 'STUTTER'] }
   };
+  const HOLDS = { 4: 'low', 5: 'hi', 6: 'mute' };
   D.PAD_MODES = PAD_MODES;
   const beatsLabel = b => (b >= 1 ? String(b) : '1/' + Math.round(1 / b));
   D.padLabel = function (d, n) {
@@ -409,6 +475,7 @@
   };
   D.padLit = function (d, n) {
     const m = d.padMode;
+    if (m === 'padfx') return !!(HOLDS[n] && d.hold[HOLDS[n]]) || (n === 7 && !!d.slip);
     return m === 'hotcue' ? d.hot[n] !== null : m === 'loop' ? !!(d.loop && !d.loop.roll && Math.abs(d.loop.beats - PAD_MODES.loop.sizes[n]) < 1e-6) : false;
   };
   D.padDown = function (d, n, shift) {
@@ -418,9 +485,10 @@
     else if (m === 'roll') D.rollStart(d, PAD_MODES.roll.sizes[n]);
     else if (m === 'jump') D.jump(d, PAD_MODES.jump.sizes[n]);
     else if (m === 'sampler') D.sample(d, n);
+    else if (m === 'padfx') { if (n === 0) D.brake(d); else if (n === 1) D.spin(d); else if (n === 2) D.reload(d); else if (n === 3) D.echoOut(d); else if (HOLDS[n]) D.holdFx(d, HOLDS[n], true); else D.rollStart(d, 1 / 8); }
   };
-  D.padUp = function (d) { if (d.padMode === 'roll' || d.slip) D.rollEnd(d); };
-  D.setPadMode = function (d, m) { if (PAD_MODES[m]) { if (d.slip) D.rollEnd(d); d.padMode = m; O.emit('deck', { deck: d.i, type: 'padmode' }); } };
+  D.padUp = function (d) { if (d.padMode === 'roll' || d.slip) D.rollEnd(d); if (d.hold.low || d.hold.hi || d.hold.mute) D.holdFx(d, '', false); };
+  D.setPadMode = function (d, m) { if (PAD_MODES[m]) { if (d.slip) D.rollEnd(d); if (d.hold.low || d.hold.hi || d.hold.mute) D.holdFx(d, '', false); d.padMode = m; O.emit('deck', { deck: d.i, type: 'padmode' }); } };
 
   // ---------- housekeeping ----------
   D.tick = function () {
@@ -436,6 +504,7 @@
   D.reset = function () { // back to a neutral mixer
     D.decks.forEach(d => { Object.assign(d.ch, { gain: 0.5, hi: 0.5, mid: 0.5, low: 0.5, filter: 0.5, fader: 1, cue: false, fx: false }); });
     Object.assign(D.mixer, { xf: 0.5 }); Object.assign(D.mixer.fx, { amount: 0.5 });
+    D.decks.forEach(d => { d.hold = {}; }); D.setRange(0.10);
     if (D.mixer.split) D.setSplit(false);
     applyAll(false); O.emit('mix', { name: 'reset' });
   };

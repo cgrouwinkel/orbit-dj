@@ -67,6 +67,11 @@
       { t: 'Press FX A to send Deck A into the echo, and turn the FX knob up past halfway.', ok: a => a.ch.fx && D.mixer.fx.amount > 0.55 },
       { t: 'Echo out: pull A’s channel fader to zero. The track is gone but its echoes trail away.', ok: a => a.ch.fx && a.ch.fader < 0.05 },
       { t: 'Bring the fader back up, then switch FX A off.', ok: a => a.ch.fader > 0.9 && !a.ch.fx }] },
+    { id: 'release', name: 'PAD FX: KILL, ECHO OUT, RELOAD', a: 'tonic', playA: true, pads: 'padfx', steps: [
+      { t: 'The pads are in PAD FX mode. Hold LOW KILL for a beat, then let go: the bass drops out and slams back in.', ok: a => a.stats.kills >= 1 && !a.hold.low },
+      { t: 'Tap ECHO OUT. One beat is caught in an echo and the track stops under it. It is the cleanest exit from a rap or garage tune.', ok: a => a.stats.echoOuts >= 1 && !a.playing },
+      { t: 'Press PLAY, let it run a bar, then tap RELOAD: a backspin, and the deck lands back on its cue point. That is the wheel-up.', ok: a => a.stats.reloads >= 1 },
+      { t: 'Press PLAY to drop it from the top again, then tap BRAKE for a turntable stop.', ok: a => a.stats.brakes >= 1 && !a.playing }] },
     { id: 'cue', name: 'HEADPHONE CUE', a: 'neon', b: 'glass', playA: true, playB: true, synced: true, init: () => D.set(1, 'fader', 0), steps: [
       { t: 'Deck B is playing with its fader down, so the room can’t hear it. Put headphones in, turn SPLIT on, then press the headphone button for B.', ok: (a, b) => D.mixer.split && b.ch.cue },
       { t: 'Left ear: Deck B alone. Right ear: what the room hears. This is how DJs line up the next track in private. Now raise B’s fader to bring it in.', ok: (a, b) => b.ch.fader > 0.9 },

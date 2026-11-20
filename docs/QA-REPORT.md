@@ -1,4 +1,28 @@
-# ORBIT DJ — QA report (v4.1.0)
+# ORBIT DJ — QA report (v4.2.0)
+
+## v4.2.0 automated results (rigs, SIMPLE / PRO, pad FX)
+
+| Suite | Result |
+|---|---|
+| `tests/qa-mix.js` (two-deck engine, lessons, gigs, layout, new v4.2 group) | 84 / 84 (new group: 11 checks; 15 lessons each completed by a scripted player) |
+| `tests/qa.js` | 112 / 112 |
+| `tests/qa-v4.js` | 45 / 45 |
+| `tests/phone-layout.js` | 10 / 10 screens |
+
+**Date:** 2026-11-20 · **Tested:** the repo root served locally, headless Chrome via Playwright with touch emulation. **Not tested:** Safari/WebKit, any physical phone, and how any of the new effects sound to a person.
+
+What the new checks cover:
+- LOW KILL and MUTE apply only while held and leave the knob and fader values alone; STUTTER rolls and returns in time.
+- ECHO OUT feeds its echo for a beat, stops the deck, and the echo keeps ringing; RELOAD lands on the cue point; SPIN stops in place; BRAKE slows to a stop.
+- 124 and 140 BPM sync at ±16 but not at ±10; changing the range keeps the playing tempo; `D.reset()` returns to ±10.
+- SYNC locks at half time when that fits better.
+- SIMPLE hides the right controls with everything still on screen; a lesson shows every control and SIMPLE returns after; the choice is saved.
+- Four rigs; the lo-fi rig and the club rig load the stated setups.
+
+Measured, not judged by ear: with the same hits, peak level through VINYL, LO-FI and no effect is within about 0.4 dB.
+
+Reviewed by eye from screenshots at 395 × 702 and 737 × 287: the level chooser, SIMPLE and PRO Mix layouts, PAD FX pads, the rigs sheet. Known cosmetic limit: with the phone sideways the six pad-mode buttons are tight (SAMPLER fills its button).
+
 
 ## v4.1.0 automated results (self-paced tutorial)
 

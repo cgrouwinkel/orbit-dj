@@ -60,7 +60,7 @@
   const dk = D.decks.map(d => {
     const root = $('#dk-' + d.i), u = { d, root, shift: false };
     root.innerHTML =
-      '<div class="dk-head"><button class="dk-load" aria-label="Load a track on deck ' + d.name + '"><b>' + d.name + '</b><span class="dk-title">TAP TO LOAD</span></button><span class="dk-bpm">—</span><span class="dk-where"></span></div>' +
+      '<div class="dk-head"><button class="dk-load" aria-label="Load a track on deck ' + d.name + '"><b>' + d.name + '</b><span class="dk-title">TAP TO LOAD</span></button><span class="dk-bpm">—</span><button class="dk-range" aria-label="Tempo range. Tap to change.">±10</button><span class="dk-where"></span></div>' +
       '<div class="dk-prog" aria-hidden="true"><i></i></div>' +
       '<div class="dk-main">' +
         '<div class="dk-page dk-jogpage"><div class="jog" role="slider" aria-label="Jog wheel deck ' + d.name + '"><i class="jog-plate"><i></i></i><span class="jog-time">0:00</span></div>' +
@@ -71,8 +71,9 @@
       '<div class="dk-transport"><button class="btn tb-cue">CUE</button><button class="btn tb-play" aria-label="Play or pause"><svg><use href="#i-play"/></svg></button><button class="btn tb-sync" aria-pressed="false">SYNC</button><button class="btn tb-loop" aria-pressed="false">LOOP<small>4</small></button><button class="btn tb-pads" aria-pressed="false">PADS</button></div>';
     const q = s => root.querySelector(s);
     Object.assign(u, { title: q('.dk-title'), bpm: q('.dk-bpm'), where: q('.dk-where'), prog: q('.dk-prog i'), jog: q('.jog'), plate: q('.jog-plate'), time: q('.jog-time'),
-      jogPage: q('.dk-jogpage'), padPage: q('.dk-padpage'), modes: q('.pad-modes'), pads: q('.dj-pads'), play: q('.tb-play'), sync: q('.tb-sync'), loop: q('.tb-loop'), padsBtn: q('.tb-pads') });
+      range: q('.dk-range'), jogPage: q('.dk-jogpage'), padPage: q('.dk-padpage'), modes: q('.pad-modes'), pads: q('.dj-pads'), play: q('.tb-play'), sync: q('.tb-sync'), loop: q('.tb-loop'), padsBtn: q('.tb-pads') });
     q('.dk-load').addEventListener('click', () => openTracks(d.i));
+    u.range.addEventListener('click', () => { const R = D.RANGES, r = R[(R.indexOf(D.RANGE) + 1) % R.length]; D.setRange(r); O.toast('Tempo range ±' + Math.round(r * 100) + '% on both decks.' + (r > 0.1 ? ' Wide enough to take 124 up to 140.' : '')); });
     // tempo fader: like real decks, towards you (down) is faster
     ctl(q('.vs'), { kind: 'v', name: 'Tempo deck ' + d.name, def: 0.5, get: () => 0.5 - d.tempo / 2, set: v => D.setTempo(d, (0.5 - v) * 2) });
     hold(q('.tb-cue'), () => { needAudio().then(ok => { if (ok) D.cueDown(d); }); }, () => D.cueUp(d));
@@ -107,6 +108,7 @@
   function renderDeck(u) {
     const d = u.d, T = d.track;
     u.title.textContent = d.loading ? 'LOADING…' : T ? T.title : 'TAP TO LOAD';
+    u.range.textContent = '±' + Math.round(D.RANGE * 100);
     u.root.classList.toggle('is-playing-deck', d.playing); u.root.classList.toggle('is-empty', !T);
     u.play.querySelector('use').setAttribute('href', d.playing ? '#i-pause' : '#i-play');
     u.play.classList.toggle('is-on', d.playing);
@@ -334,8 +336,71 @@
 
   // ---------- view lifecycle ----------
   let hintAt = 0;
+  // ---------- SIMPLE / PRO: how many controls the Mix tab shows ----------
+  const LEVEL_KEY = 'orbitV42MixLevel';
+  let level = O.store.get(LEVEL_KEY, null); // null until the player has chosen; treated as PRO
+  function applyLevel() {
+    const simple = level === 'simple' && !SC.active; // lessons, gigs and Club Night always get every control
+    document.documentElement.classList.toggle('mix-simple', simple);
+    const b = $('#mc-level'); b.textContent = level === 'simple' ? 'SIMPLE' : 'PRO'; b.hidden = !!SC.active; b.classList.toggle('is-on', level !== 'simple');
+    $$('#seg-level [data-level]').forEach(x => x.setAttribute('aria-checked', String(x.dataset.level === (level || 'pro'))));
+    if (simple) dk.forEach(u => { if (u.d.padMode !== 'hotcue' && u.d.padMode !== 'loop') D.setPadMode(u.d, 'hotcue'); });
+    requestAnimationFrame(() => { sizeWave(); wake(); });
+  }
+  function setLevel(l, quiet) {
+    level = l === 'simple' ? 'simple' : 'pro'; O.store.set(LEVEL_KEY, level); applyLevel();
+    if (!quiet) O.toast(level === 'simple' ? 'SIMPLE: play, cue, sync, loop, hot cues, bass, filter and the faders.' : 'PRO: every control, plus PAD FX, the FX unit, headphone cue and tempo range.');
+  }
+  $('#mc-level').addEventListener('click', () => setLevel(level === 'simple' ? 'pro' : 'simple'));
+  $('#seg-level').addEventListener('click', e => { const b = e.target.closest('[data-level]'); if (b) setLevel(b.dataset.level, true); });
+  $$('#ov-level [data-level]').forEach(b => b.addEventListener('click', () => { ui.closeOverlay('ov-level'); setLevel(b.dataset.level); }));
+  O.on('school', applyLevel);
+
+  // ---------- rigs: real kinds of gear, and the ORBIT screen that does the same job ----------
+  const RIGS = [
+    { id: 'club', name: 'CLUB DECKS', gear: 'Two or more club media players and a club mixer. Pioneer / AlphaTheta CDJ-3000 players with a DJM mixer are the usual booth setup.',
+      who: 'UK garage DJs such as DJ EZ and Sammy Virji play on this layout. Skepta and Jammer DJ house on club decks as Más Tiempo.',
+      moves: 'Hot-cue juggling, loop rolls, bass swaps, echo out, and the reload (wheel-up).',
+      orbit: 'Mix tab in PRO. PAD FX has BRAKE, SPIN, RELOAD, ECHO OUT and hold-to-kill pads; tap ±10 beside the tempo to widen the range.', go: 'OPEN THE DECKS' },
+    { id: 'groovebox', name: 'PAD GROOVEBOX', gear: 'A standalone 16-pad sampler and sequencer: Native Instruments Maschine+, Akai MPC Live II.',
+      who: 'Fred again.. plays chops and drums live on pads: a Maschine+ in his Boiler Room set, and an MPC Live II seen on stage at Glastonbury.',
+      moves: 'Finger drumming, chopped vocal and chord pads, note repeat for rolls, switching patterns on the bar.',
+      orbit: 'Studio → Beat pad: 16 pads, NOTE RPT, patterns A to D, REC. This rig loads Garage Chops at 132 BPM with a light swing.', go: 'LOAD THIS RIG' },
+    { id: 'lofi', name: 'LO-FI SAMPLER', gear: 'Boss SP-303 and Roland SP-404 samplers, Akai MPC 2000XL, Ensoniq ASR-10.',
+      who: 'Madlib is known for the SP-303 alongside an MPC 2000XL. Kanye West has worked on an MPC 2000XL and an Ensoniq ASR-10.',
+      moves: 'Dusty drums played loose, heavy swing, the whole beat pushed through the sampler’s own effects.',
+      orbit: 'Studio → Beat pad. This rig loads the Dusty Kit at 88 BPM, swing 62, with the VINYL pad effect on (MODES → PAD FX; LO-FI is the harsher one).', go: 'LOAD THIS RIG' },
+    { id: 'grid', name: 'LAPTOP STEP GRID', gear: 'A step sequencer on a screen: FL Studio’s channel rack. Before that, Music 2000 on a PlayStation.',
+      who: 'Metro Boomin produces in FL Studio. Skepta made early beats in Music 2000 and still builds tracks on a laptop.',
+      moves: 'Click the drums in step by step: sparse kick, snare on 3, rolling hats, a sliding 808.',
+      orbit: 'Studio → Beat pad → STEPS. This rig loads Midnight 808 at 140 BPM, straight timing. The Song builder arranges full tracks.', go: 'LOAD THIS RIG' }
+  ];
+  function openRigs() {
+    $('#rig-list').replaceChildren(...RIGS.map(r => {
+      const c = el('div', 'rig', '<h3></h3><dl class="map-dl"><dt>REAL GEAR</dt><dd></dd><dt>WHO PLAYS IT</dt><dd></dd><dt>SIGNATURE MOVES</dt><dd></dd><dt>IN ORBIT</dt><dd></dd></dl><button class="btn btn-small is-on"></button>');
+      c.querySelector('h3').textContent = r.name; const dd = c.querySelectorAll('dd'); [r.gear, r.who, r.moves, r.orbit].forEach((t, i) => { dd[i].textContent = t; });
+      const b = c.querySelector('button'); b.textContent = r.go; b.addEventListener('click', () => loadRig(r.id));
+      return c;
+    }));
+    ui.closeOverlay('ov-level'); ui.openOverlay('ov-rigs');
+  }
+  function loadRig(id) {
+    ui.closeOverlay('ov-rigs');
+    if (id === 'club') { setLevel('pro', true); ui.showView('mix'); dk.forEach(u => { D.setPadMode(u.d, 'padfx'); showPads(u, true); }); O.toast('Club decks: PRO layout, pads in PAD FX. Tap a deck title to load a track.'); return; }
+    const P = { groovebox: ['garage', 132, 56, 'off', 'Garage Chops at 132 BPM. Pads 1 to 4 are drums; the rest are chops.'], lofi: ['dusty', 88, 62, 'vinyl', 'Dusty Kit at 88 BPM, swing 62, VINYL on.'], grid: ['midnight', 140, 50, 'off', 'Midnight 808 at 140 BPM. Tap steps to place hits.'] }[id];
+    if (BP.playing) BP.stop();
+    ui.showView('pads'); BP.setKit(P[0]); BP.setBpm(P[1]); BP.setSwing(P[2]); BP.setFx(P[3]);
+    const t = document.querySelector('[data-bptab="' + (id === 'grid' ? 'steps' : 'modes') + '"]'); if (id !== 'groovebox' && t) t.click();
+    O.toast(P[4] + ' Your pattern is unchanged.');
+  }
+  $('#set-rigs').addEventListener('click', openRigs); $('#level-rigs').addEventListener('click', openRigs);
+  const fxBtn = $('#bp-fx'), fxLabel = () => { fxBtn.textContent = 'PAD FX: ' + ({ off: 'OFF', vinyl: 'VINYL', lofi: 'LO-FI' })[BP.fx]; fxBtn.classList.toggle('is-on', BP.fx !== 'off'); };
+  fxBtn.addEventListener('click', () => { E.unlock(); BP.setFx(BP.FXS[(BP.FXS.indexOf(BP.fx) + 1) % BP.FXS.length]); });
+  O.on('bp-change', fxLabel); fxLabel();
+
   O.mixui = {
-    enter() { sizeWave(); D.preload(); dk.forEach(renderDeck); renderMixer(); coachKey = ''; renderCoach(); wake(); },
+    level: () => level, setLevel, openRigs, loadRig,
+    enter() { if (level === null && !SC.active) ui.openOverlay('ov-level'); applyLevel(); sizeWave(); D.preload(); dk.forEach(renderDeck); renderMixer(); coachKey = ''; renderCoach(); wake(); },
     frame() {
       dk.forEach(frameDeck); frameMeters(); drawWave();
       const now = performance.now(); if (now - hintAt > 250) { hintAt = now; renderCoach(); }
@@ -349,5 +414,5 @@
   window.addEventListener('resize', () => { if (ui.view === 'mix') requestAnimationFrame(() => { sizeWave(); wake(); }); });
   window.addEventListener('orientationchange', () => setTimeout(() => { if (ui.view === 'mix') { sizeWave(); wake(); } }, 260));
   O.on('theme', () => { sizeWave(); wake(); });
-  dk.forEach(renderDeck); renderMixer(); renderCoach();
+  dk.forEach(renderDeck); renderMixer(); renderCoach(); applyLevel();
 })();

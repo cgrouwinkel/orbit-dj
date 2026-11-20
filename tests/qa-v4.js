@@ -7,7 +7,7 @@ function check(name, ok, detail) { results.push({ group: current, name, ok: !!ok
 (async () => {
   const browser = await chromium.launch({ executablePath: process.env.CHROME || '/usr/bin/google-chrome', args: ['--autoplay-policy=no-user-gesture-required'] });
   const ctx = await browser.newContext({ viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true });
-  await ctx.addInitScript(() => { try { if (!sessionStorage.getItem('seeded')) { localStorage.clear(); localStorage.setItem('orbitV22Tutorial', 'true'); sessionStorage.setItem('seeded', '1'); } } catch (e) {} });
+  await ctx.addInitScript(() => { try { if (!sessionStorage.getItem('seeded')) { localStorage.clear(); localStorage.setItem('orbitV22Tutorial', 'true'); localStorage.setItem('orbitV42MixLevel', '"pro"'); sessionStorage.setItem('seeded', '1'); } } catch (e) {} });
   const page = await ctx.newPage(); const errors = [];
   page.on('pageerror', e => errors.push(e.message)); page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
   await page.goto(BASE + '/index.html'); await page.waitForTimeout(300);

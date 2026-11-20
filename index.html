@@ -66,7 +66,7 @@
       <canvas class="mix-wave" id="mix-wave" aria-label="Scrolling waveforms of both decks with beat marks. Deck A on top, Deck B below."></canvas>
       <div class="mix-coach" id="mix-coach" role="status" aria-live="polite">
         <b id="mc-step">FREE MIX</b><span id="mc-text"></span>
-        <div class="mc-btns"><button class="btn btn-small" id="mc-quit" hidden>QUIT</button><button class="btn btn-small is-on" id="mc-next" hidden>NEXT</button><button class="btn btn-small" id="mc-school">LESSONS + GIGS</button></div>
+        <div class="mc-btns"><button class="btn btn-small" id="mc-quit" hidden>QUIT</button><button class="btn btn-small is-on" id="mc-next" hidden>NEXT</button><button class="btn btn-small" id="mc-level" aria-label="Mix layout: simple or pro. Tap to switch.">PRO</button><button class="btn btn-small" id="mc-school">LESSONS + GIGS</button></div>
       </div>
       <div class="mix-body">
         <div class="deck dk" id="dk-0" data-deck="0" aria-label="Deck A"></div>
@@ -81,6 +81,7 @@
             <div class="mx-pair"><button class="btn mx-b" id="hp-0" aria-pressed="false" aria-label="Headphone cue deck A"><svg><use href="#i-headphones"/></svg>A</button><button class="btn mx-b" id="hp-1" aria-pressed="false" aria-label="Headphone cue deck B"><svg><use href="#i-headphones"/></svg>B</button></div>
             <button class="btn mx-b" id="hp-split" aria-pressed="false">SPLIT</button>
             <div class="kn" id="mx-vol" data-label="MASTER"></div>
+            <p class="mx-tip">LOW: bass.<br>FILTER: sweep.<br>Tall faders: volume.<br>Bottom fader: A to B.</p>
           </div>
           <div class="mx-fader" data-ch="1"></div>
           <div class="mx-col" data-ch="1"></div>
@@ -290,6 +291,7 @@
             <button class="btn btn-small" id="bp-16">16 LEVELS</button>
             <button class="btn btn-small" id="bp-metro">METRO</button>
             <button class="btn btn-small" id="bp-quant">SNAP 1/16</button>
+            <button class="btn btn-small" id="bp-fx" aria-label="Pad effect. Tap to change.">PAD FX: OFF</button>
           </div>
           <label class="mini-fader wide"><span>SWING</span><input type="range" id="bp-swing" min="50" max="75" data-default="50" aria-label="Swing"><output id="bp-swing-out"></output></label>
           <div class="panel-row">
@@ -366,6 +368,9 @@
           <div class="field"><span class="field-label">CAREER LOCKS</span>
             <div class="seg" id="seg-unlock" role="radiogroup" aria-label="Career locks"><button role="radio" data-unlock="off">EARN UNLOCKS</button><button role="radio" data-unlock="on">EVERYTHING OPEN</button></div>
           </div>
+          <div class="field"><span class="field-label">MIX TAB LAYOUT</span>
+            <div class="seg" id="seg-level" role="radiogroup" aria-label="Mix tab layout"><button role="radio" data-level="simple">SIMPLE</button><button role="radio" data-level="pro">PRO (EVERY CONTROL)</button></div>
+          </div>
           <div class="field"><span class="field-label">DJ MOVES (SCRATCHES, FADER AND EQ MOVES IN SETS)</span>
             <div class="seg" id="seg-moves" role="radiogroup" aria-label="DJ moves"><button role="radio" data-moves="on">ON</button><button role="radio" data-moves="off">OFF (TAPS ONLY)</button></div>
           </div>
@@ -393,6 +398,7 @@
           <p class="note">Best on iPhone: hold the phone upright. Safari → Share → <b>Add to Home Screen</b> gives ORBIT the whole screen.</p>
           <button class="btn" id="set-intro">Replay tutorial</button>
           <button class="btn" id="set-map">Controller map</button>
+          <button class="btn" id="set-rigs">Rigs: the gear behind the sound</button>
           <button class="btn btn-danger" id="set-reset">Reset career progress</button>
           <p class="note" id="version-line"></p>
         </div>
@@ -446,6 +452,29 @@
       <dl class="map-dl"><dt>ON A REAL CONTROLLER</dt><dd id="tutstep-real"></dd><dt>WHY IT MATTERS</dt><dd id="tutstep-why"></dd><dt>YOUR TURN</dt><dd id="tutstep-now"></dd></dl>
       <p class="note">Nothing plays yet. Tap TRY IT and you get a four-beat count before the first note. If you miss, the drill simply repeats.</p>
       <div class="sheet-actions"><button class="link-btn" data-tut-skip>Skip the tutorial</button><button class="btn" id="tutstep-back">BACK</button><button class="btn-start small" id="tutstep-go"><svg><use href="#i-play"/></svg><span>TRY IT</span></button></div>
+    </div>
+  </div>
+
+  <div class="overlay" id="ov-level" role="dialog" aria-modal="true" aria-labelledby="level-title" hidden>
+    <div class="sheet sheet-tut">
+      <div class="eyebrow">MIX TAB</div>
+      <h2 class="tut-h" id="level-title">HOW MUCH HAVE YOU MIXED?</h2>
+      <p class="note">This only sets how many controls the Mix tab shows. Switch any time with the SIMPLE / PRO button above the decks, or in Setup. Lessons always show every control.</p>
+      <div class="track-list">
+        <button class="track-row" data-level="simple"><b>NEW TO IT</b><span>Two decks with play, cue, sync, loop, hot cues, bass, filter and the faders.</span><em>SIMPLE</em></button>
+        <button class="track-row" data-level="pro"><b>I HAVE MIXED BEFORE</b><span>Everything: gain and full EQ, FX unit, headphone cue, all pad modes including PAD FX, nudge, tempo range.</span><em>PRO</em></button>
+      </div>
+      <div class="sheet-actions"><button class="link-btn" id="level-rigs">What gear is this based on?</button></div>
+    </div>
+  </div>
+
+  <div class="overlay" id="ov-rigs" role="dialog" aria-modal="true" aria-labelledby="rigs-title" hidden>
+    <div class="sheet sheet-tut sheet-rigs">
+      <button class="icon-btn sheet-x" data-close aria-label="Close"><svg><use href="#i-x"/></svg></button>
+      <div class="eyebrow">RIGS</div>
+      <h2 class="tut-h" id="rigs-title">THE GEAR BEHIND THE SOUND</h2>
+      <p class="note">Four kinds of rig behind UK garage, grime, house and rap production, and where each one lives in ORBIT. Gear is as reported in interviews and live footage; artists change their setups.</p>
+      <div class="rig-list" id="rig-list"></div>
     </div>
   </div>
 

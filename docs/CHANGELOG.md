@@ -1,5 +1,27 @@
 # ORBIT DJ — Changelog
 
+## v4.2.0 — 2026-11-20 (rigs: the gear behind garage, grime and rap, with SIMPLE and PRO layouts)
+
+Owner request: research the controllers and devices used by Fred again.., Skepta and artists near them in sound, build those in, and keep it simple for a beginner but well equipped for someone with real mixing history in rap and EDM. Research notes and sources: `docs/RIGS-RESEARCH.md`.
+
+### Mix tab
+- **SIMPLE / PRO.** The first time the Mix tab opens it asks how much you have mixed. SIMPLE shows play, cue, sync, loop, hot cues, LOW, FILTER, the channel faders and the crossfader. PRO shows everything. The button sits above the decks and in Setup. Lessons, gigs and Club Night always show every control.
+- **PAD FX** (new pad mode, PRO). Top row stops the track: BRAKE (turntable stop), SPIN (backspin), RELOAD (backspin and back to the cue point: the wheel-up of grime and UK garage sets), ECHO OUT (one beat into a half-beat echo, then the track stops). Bottom row works while held: LOW KILL, HI KILL, MUTE, STUTTER (1/8 roll).
+- **Tempo range.** Tap ±10 beside a deck's tempo to switch both decks between ±6, ±10 and ±16 %. At ±16 a 124 BPM house track reaches 140. The decks keep the tempo they are playing at when the range changes.
+- **SYNC at half or double time** when that is the closer fit (70 against 140), as on club players.
+- New lesson: PAD FX: KILL, ECHO OUT, RELOAD (15 controller lessons).
+
+### Studio
+- **Pad effects on the beat pad** (MODES → PAD FX): VINYL (soft saturation, rolled-off top) and LO-FI (coarse bit depth, narrow band). Live only; the WAV bounce stays clean.
+
+### Rigs
+- **Setup → Rigs: the gear behind the sound.** Four rigs, each with the real gear, who is reported to play it, its signature moves, and where it lives in ORBIT: Club decks, Pad groovebox, Lo-fi sampler, Laptop step grid. Each has a button that opens the right screen and loads a matching setup. Loading a rig never changes your pattern.
+
+### Not done
+- No key lock: pitch still follows tempo.
+- The pad effects are approximations built from a wave-shaper and filters, not models of any specific sampler.
+- Nobody has heard or tried any of this on a phone yet.
+
 ## v4.1.0 — 2026-11-19 (self-paced tutorial with a controller map)
 
 Owner feedback on the tutorial: it starts too fast; it should pause to let the player choose a song, then teach which buttons to use and why, by DJ controller standards.

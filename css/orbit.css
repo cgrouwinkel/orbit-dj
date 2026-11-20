@@ -340,6 +340,17 @@ input[type=range]::-moz-range-thumb { width: 22px; height: 30px; border-radius: 
 .dk-title { font: 800 11px/1 var(--font-ui); letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-decoration: underline dotted; text-underline-offset: 3px; }
 .dk-bpm { flex: none; font: 800 13px/1 ui-monospace, Menlo, monospace; color: var(--accent); }
 .dk-bpm.is-shift { color: var(--hype); }
+.dk-range { flex: none; min-height: 22px; padding: 1px 5px; border: 1px solid var(--line); border-radius: 6px; background: none; color: var(--muted); font: 800 9.5px/1 ui-monospace, Menlo, monospace; }
+.mx-tip { display: none; margin: 0; grid-row: 2 / -1; align-self: center; font: 700 10px/1.5 var(--font-ui); color: var(--muted); text-align: center; }
+/* SIMPLE layout: the controls a first mix needs. Lessons, gigs and Club Night always show everything. */
+.mix-simple .dk-range, .mix-simple .dk-side, .mix-simple .pm[data-mode="roll"], .mix-simple .pm[data-mode="jump"], .mix-simple .pm[data-mode="sampler"], .mix-simple .pm[data-mode="padfx"],
+.mix-simple .kn[data-knob="gain"], .mix-simple .kn[data-knob="hi"], .mix-simple .kn[data-knob="mid"], .mix-simple #fx-type, .mix-simple #fx-amt, .mix-simple .mx-mid .mx-pair, .mix-simple #hp-split, .mix-simple #mx-vol { display: none; }
+.mix-simple .mx-tip { display: block; }
+.dj-pad[data-mode="padfx"] { font-size: 9px; line-height: 1.1; letter-spacing: 0; padding-left: 1px; padding-right: 1px; }
+.sheet.sheet-rigs { width: min(820px, 100%); }
+.rig-list { display: grid; gap: 10px; } .rig { padding: 10px 12px 12px; border: 1px solid var(--line-soft); border-radius: var(--r); background: rgba(255,255,255,.03); display: grid; gap: 6px; }
+.rig h3 { margin: 0; font: 800 15px/1.2 var(--font-display, var(--font-ui)); letter-spacing: .06em; color: var(--ink); } .rig .btn { justify-self: start; min-height: 36px; }
+@media (min-width: 700px) { .rig-list { grid-template-columns: 1fr 1fr; } }
 .dk-where { flex: none; font: 800 9px/1 var(--font-ui); letter-spacing: .06em; color: var(--muted); white-space: nowrap; }
 .dk-where b { color: var(--ink); font-size: 12px; } .dk-where.is-top b { color: var(--hype); }
 .dk-prog { height: 3px; border-radius: 2px; background: rgba(255,255,255,.12); overflow: hidden; flex: none; }
@@ -446,7 +457,8 @@ input[type=range]::-moz-range-thumb { width: 22px; height: 30px; border-radius: 
   .dk-side { width: 62px; grid-template-columns: 1fr 1fr; } .dk-side .btn { font-size: 13px; }
   .dk-tempo { width: 30px; }
   .dk-transport .btn { min-height: 34px; font-size: 9px; } .dk-transport svg { width: 15px; height: 15px; }
-  .pad-modes .btn { min-height: 22px; font-size: 7.5px; } .dj-pad { font-size: 9px; }
+  .pad-modes .btn { min-height: 22px; font-size: 7px; letter-spacing: 0; padding: 2px 0; } .dj-pad { font-size: 9px; } .dj-pad[data-mode="padfx"] { font-size: 8px; }
+  .mix-simple .mx-tip { display: none; } .dk-range { min-height: 18px; padding: 0 3px; }
   .mx { grid-template-columns: 66px 31px minmax(0, 1fr) 31px 66px; grid-template-rows: minmax(0, 1fr) 30px; padding: 4px; }
   .view-songs { grid-template-columns: 150px minmax(0, 1fr); }
   .sg-arr { overflow-y: auto; } .sg-rows { flex: none; overflow: visible; min-height: 0; } .sg-col { padding: 6px; gap: 5px; }

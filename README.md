@@ -6,7 +6,7 @@ A free, open-source DJ-learning rhythm game and beat pad for the browser, built 
 
 **Play:** https://cgrouwinkel.github.io/orbit-dj/ (in Safari: Share → *Add to Home Screen*, then hold the phone upright; iPad works both ways)
 
-## What's in it (v4.1.0)
+## What's in it (v4.2.0)
 - **Mix tab, a two-deck DJ controller:** jog wheels, tempo faders, SYNC, CUE, loops, hot cues, loop roll, beat jump, sampler pads, 3-band EQ, filter, gain, channel faders, crossfader, FX and headphone split cue, with scrolling waveforms.
 - **DJ school:** 14 lessons (one per control) that check what you actually do, plus 4 scored transition gigs.
 - **Beat trainer:** 7 beat-making lessons on the beat pad.
@@ -15,6 +15,7 @@ A free, open-source DJ-learning rhythm game and beat pad for the browser, built 
 - **Studio:** beat pad plus a song builder (tempo, key, sounds, arrangement, your own beat); play your songs in the game, on the decks, or export WAV.
 - **Your music:** Quick Play any song at any level; import your own audio (stays on the device) with tempo detection.
 - **Seven original songs:** tech house, bass house, UK garage, dubstep, trap, dusty boom bap and chipmunk soul, all synthesized in code at 44.1 kHz (no samples from records).
+- **Rigs:** SIMPLE and PRO Mix layouts; PAD FX (brake, spin, reload, echo out, kills); tempo range ±6 / 10 / 16; VINYL and LO-FI pad effects; a guide to the real gear behind UK garage, grime and rap production.
 - **Rhythm game:** self-paced tutorial on first open (pick a song, controller map, five drills that each wait for a tap), round gems on a perspective highway, hold notes, HYPE, crowd meter, minute-long sets.
 - **Career:** four venues (Bedroom DJ, House Party, Underground Club, Main Stage), each with its own original song. Notes are charted from the song's real kick, snare and hat parts. Rookie, Club and Headliner difficulties, stars, grades and personal bests.
 - **DJ controls, revealed gradually:** pads, cue, play/pause, crossfader, low EQ and filter. Each has a briefing with a before/after sound demo, best practice, common mistakes and a scored challenge.

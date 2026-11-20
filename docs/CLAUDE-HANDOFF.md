@@ -1,4 +1,4 @@
-# ORBIT DJ — Claude handoff (after v4.1.0, 2026-11-19)
+# ORBIT DJ — Claude handoff (after v4.2.0, 2026-11-20)
 
 ## Source of truth
 - This source bundle (`ORBIT-DJ-v2.1.0-source.zip`) replaces earlier bundles and `ORBIT-Arcade-Final-Prototype.zip`.
@@ -32,6 +32,15 @@ Sounds: `python3 tools/make_sounds.py` regenerates `sounds/` and `js/sounds-mani
 - Sound feedback before that: no voice-like or brass sounds, no bright loud hi-hats, clean song intros. See `CLEAN` and `TOPS_LEVEL` in `js/music.js`.
 - v4.0.1 layout fixes have not been confirmed on the phone yet.
 - Tutorial feedback: "starts too fast, pause to let user choose song, then learn what buttons to use and why per DJ controller standards". **Nothing in a teaching flow should start without a tap, and every control gets a what / why tied to real controller layout.** v4.1.0 applies this to the first-run tutorial only; the Mix lessons and beat trainer still run on their own pacing.
+
+## v4.2 rigs, SIMPLE / PRO, pad FX
+- Owner brief: act as an expert in current electronic dance music and rap / UK garage production; research what Fred again.., Skepta and similar artists play on; build it in; simple for a beginner, deep enough for someone with mixing history. Research and sources: `docs/RIGS-RESEARCH.md`.
+- **Mix level** (mixui.js): `orbitV42MixLevel` = `"simple"` or `"pro"`; `null` until chosen (treated as PRO, and `#ov-level` asks on the first Mix visit). `applyLevel()` sets `html.mix-simple`, which hides controls in CSS only. It is switched off while `SC.active` so lessons, gigs and Club Night always have every control. Tests seed `"pro"`.
+- **Pad FX** (decks.js): pad mode `padfx`. `D.brake`, `D.spin`, `D.reload`, `D.echoOut` (own delay line `g.relDelay`, fed per channel through `n.rel`, so the FX unit's settings are untouched), `D.holdFx` (momentary `d.hold.low / hi / mute`, read in `applyAll`; knob and fader values do not change).
+- **Tempo range**: `D.setRange(0.06 | 0.10 | 0.16)`; `RANGE` is now a `let` and `D.RANGE` mirrors it. `D.reset()` returns to ±10 so lessons and gigs stay as designed.
+- **Half / double sync**: `syncMult(d)` picks 1, 2 or 0.5; `d.syncM` is used for tempo and phase.
+- **Beat pad effects** (beatpad.js): `BP.setFx('off' | 'vinyl' | 'lofi')` re-routes `E.nodes.sampler` through a wave-shaper and two filters. Not in the offline bounce.
+- **Rigs** (mixui.js): `RIGS[]`, `openRigs()`, `loadRig(id)`; `#ov-rigs`; Setup button `#set-rigs`.
 
 ## v4.1 tutorial (ui.js)
 - Flow: `#ov-intro` → `#ov-tutsong` (song list, preview on tap, sets `G.tutSong = { style, bpm, name, id }`) → `#ov-map` (controller map; also opened from Setup with `openMap()`) → `#ov-tutstep` card → drill → next card … → `#ov-tutdone`.

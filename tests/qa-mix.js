@@ -8,7 +8,7 @@ const results = []; let current = '';
 function check(name, ok, detail) { results.push({ group: current, name, ok: !!ok, detail: detail === undefined ? '' : detail }); console.log((ok ? 'PASS ' : 'FAIL ') + current + ' :: ' + name + (detail !== undefined ? '  [' + (typeof detail === 'string' ? detail : JSON.stringify(detail)).slice(0, 420) + ']' : '')); }
 async function newPage(browser, viewport) {
   const ctx = await browser.newContext({ viewport: viewport || { width: 844, height: 390 }, hasTouch: true, isMobile: true });
-  await ctx.addInitScript(() => { try { if (!sessionStorage.getItem('seeded')) { localStorage.clear(); localStorage.setItem('orbitV22Tutorial', 'true'); sessionStorage.setItem('seeded', '1'); } } catch (e) {} });
+  await ctx.addInitScript(() => { try { if (!sessionStorage.getItem('seeded')) { localStorage.clear(); localStorage.setItem('orbitV22Tutorial', 'true'); localStorage.setItem('orbitV42MixLevel', '"pro"'); sessionStorage.setItem('seeded', '1'); } } catch (e) {} });
   const page = await ctx.newPage(); page._errors = [];
   page.on('pageerror', e => page._errors.push('pageerror: ' + e.message));
   page.on('console', m => { if (m.type() === 'error') page._errors.push('console: ' + m.text()); });
@@ -137,6 +137,7 @@ async function newPage(browser, viewport) {
       hotcue: [() => D.padDown(A, 0), async () => { await wait(400); D.padDown(A, 0); }, async () => { D.padDown(A, 1); await wait(200); D.padDown(A, 0); await wait(200); D.padDown(A, 1); }],
       roll: [async () => { for (let i = 0; i < 2; i++) { D.padDown(A, 3); await wait(300); D.padUp(A); await wait(100); } }, () => { D.setPadMode(A, 'jump'); D.padDown(A, 3); }, () => { D.setPadMode(A, 'sampler'); D.padDown(A, 0); D.padDown(A, 4); D.padDown(A, 7); }],
       fx: [() => { D.set(0, 'fx', true); D.setFx({ amount: 0.7 }); }, () => D.set(0, 'fader', 0), () => { D.set(0, 'fader', 1); D.set(0, 'fx', false); }],
+      release: [async () => { D.padDown(A, 4); await wait(300); D.padUp(A); }, () => D.padDown(A, 3), async () => { await until(() => !A.playing, 3000); D.play(A); await wait(500); D.padDown(A, 2); }, async () => { D.play(A); await wait(400); D.padDown(A, 0); }],
       cue: [() => { D.setSplit(true); D.set(1, 'cue', true); }, () => D.set(1, 'fader', 1), () => D.setSplit(false)],
       mix: [() => { D.toggleSync(B); D.set(1, 'low', 0); }, async () => { await untilBar(A, 8, 4); await until(() => D.where(A).phraseBar === 1, 4000); D.play(B); }, () => D.setXf(0.5), () => { D.set(0, 'low', 0); D.set(1, 'low', 0.5); }, () => { D.setXf(1); D.pause(A); }]
     };
@@ -155,7 +156,7 @@ async function newPage(browser, viewport) {
     return out;
   });
   const ids = Object.keys(lessons).filter(k => lessons[k] && lessons[k].steps);
-  check('14 controller lessons, each with a scripted player for every step', ids.length === 14 && ids.every(k => lessons[k].bots === lessons[k].steps), ids.length);
+  check('15 controller lessons, each with a scripted player for every step', ids.length === 15 && ids.every(k => lessons[k].bots === lessons[k].steps), ids.length);
   for (const k of ids) check('Lesson "' + k + '": every step passes when the move is made, and completion is saved', lessons[k].passed === lessons[k].steps && lessons[k].done && lessons[k].saved, lessons[k]);
   check('Lesson steps do not pass by themselves', lessons.idle === 0, lessons.idle);
   check('Transition lesson: a start on bar 1 lands within half a beat of the phrase', lessons.mixPhrase <= 0.6, lessons.mixPhrase);
@@ -237,6 +238,52 @@ async function newPage(browser, viewport) {
   await page.evaluate(() => ORBIT.ui.setTheme('aero')); await page.waitForTimeout(150);
   check('Theme switch keeps the Mix tab working', await page.evaluate(() => document.documentElement.classList.contains('theme-aero') && !!document.querySelector('#dk-0 .jog-plate')));
   await page.evaluate(() => ORBIT.ui.setTheme('grunge'));
+  // ---------------------------------------------------------------- v4.2: pad FX, tempo range, half-time sync, SIMPLE / PRO, rigs
+  current = 'Pad FX + rigs';
+  const fx = await page.evaluate(async () => {
+    const O = ORBIT, D = O.decks, A = D.decks[0], B = D.decks[1], wait = ms => new Promise(r => setTimeout(r, ms)), o = {};
+    if (O.school.active) O.school.stop(); D.stopAll(); D.reset();
+    await D.load(0, 'tonic'); await D.load(1, 'final');
+    D.setPadMode(A, 'padfx'); D.play(A); await wait(700);
+    D.padDown(A, 4); await wait(150); o.lowKill = Math.round(D.g.ch[0].low.gain.value) <= -30 && D.padLit(A, 4) && A.ch.low === 0.5; D.padUp(A); await wait(150); o.lowBack = Math.round(D.g.ch[0].low.gain.value) === 0;
+    D.padDown(A, 6); await wait(120); o.mute = D.g.ch[0].fader.gain.value < 0.02 && A.ch.fader === 1; D.padUp(A); await wait(120); o.muteBack = D.g.ch[0].fader.gain.value > 0.9;
+    D.padDown(A, 7); await wait(200); o.stutter = !!A.slip; D.padUp(A); o.stutterBack = !A.slip && A.playing;
+    D.padDown(A, 3); await wait(200); o.echoFeeding = D.g.ch[0].rel.gain.value > 0.5; await wait(700); o.echoStopped = !A.playing; await wait(250); o.echoTail = D.level(2) > 0.005;
+    D.play(A); await wait(700); D.padDown(A, 2); await wait(100); o.reload = !A.playing && Math.abs(A.pos - A.cue) < 0.01 && A.stats.reloads === 1;
+    D.play(A); await wait(500); const p1 = D.posOf(A); D.padDown(A, 0); await wait(350); o.slowing = A.src.node.playbackRate.value < 0.8; await wait(700); o.brake = !A.playing && A.pos - p1 > 0.2 && A.pos - p1 < 0.7;
+    D.play(A); await wait(300); D.padDown(A, 1); await wait(100); o.spin = !A.playing && A.pos > A.cue + 0.2;
+    // tempo range: 124 against 140 is 12.9 % apart
+    await D.load(0, 'neon'); o.far10 = !D.canSync(B); D.setRange(0.16); o.near16 = D.canSync(B); D.play(A); D.setTempo(A, 0.5); const bpm = D.bpm(A); D.setRange(0.06); o.kept = Math.abs(D.bpm(A) - Math.min(bpm, 124 * 1.06)) < 0.01; D.setRange(0.10); D.setTempo(A, 0);
+    const keep = B.track.bpm; B.track.bpm = 62; o.half = D.canSync(B) && D.toggleSync(B) && B.syncM === 0.5 && Math.abs(D.bpm(B) - 62) < 0.01; D.toggleSync(B); B.track.bpm = keep;
+    D.stopAll(); D.setRange(0.16); D.reset(); o.reset = D.RANGE === 0.10;
+    return o;
+  });
+  check('PAD FX holds: LOW KILL and MUTE apply while held and leave the knob and fader where they were', fx.lowKill && fx.lowBack && fx.mute && fx.muteBack, fx);
+  check('PAD FX: STUTTER rolls while held and returns in time', fx.stutter && fx.stutterBack, fx);
+  check('PAD FX: ECHO OUT feeds the echo for a beat, stops the deck, and the echo rings on', fx.echoFeeding && fx.echoStopped && fx.echoTail, fx);
+  check('PAD FX: RELOAD stops the deck on its cue point; SPIN stops it where it was; BRAKE slows to a stop', fx.reload && fx.spin && fx.slowing && fx.brake, fx);
+  check('Tempo range: 124 and 140 sync at ±16 but not ±10; changing range keeps the playing tempo; reset returns to ±10', fx.far10 && fx.near16 && fx.kept && fx.reset, fx);
+  check('SYNC locks at half time when that is the closer fit', fx.half, fx);
+  const lv = await page.evaluate(async () => {
+    const O = ORBIT, wait = ms => new Promise(r => setTimeout(r, ms)), vis = s => [...document.querySelectorAll(s)].filter(e => e.offsetParent !== null).length, o = {};
+    O.mixui.setLevel('simple', true); await wait(100);
+    o.simple = { knobs: vis('.mx-col .kn'), side: vis('.dk-side'), fxu: vis('#fx-type') + vis('#hp-split'), range: vis('.dk-range'), inside: [...document.querySelectorAll('#view-mix .btn, #view-mix .ctl, #view-mix .jog')].filter(e => e.offsetParent).every(e => { const r = e.getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight + 1; }) };
+    O.school.startLesson('eq'); await wait(300); o.lessonShowsAll = vis('.mx-col .kn') === 10 && !document.documentElement.classList.contains('mix-simple'); O.school.stop(); await wait(100);
+    o.backToSimple = document.documentElement.classList.contains('mix-simple');
+    document.getElementById('mc-level').click(); await wait(100); o.pro = { knobs: vis('.mx-col .kn'), saved: localStorage.getItem('orbitV42MixLevel') };
+    O.ui.showView('settings'); document.getElementById('set-rigs').click(); await wait(100); o.rigs = document.querySelectorAll('#rig-list .rig').length;
+    document.querySelectorAll('#rig-list .rig button')[2].click(); await wait(300);
+    o.lofi = { view: O.ui.view, kit: O.beatpad.kit, bpm: O.beatpad.bpm, swing: O.beatpad.swing, fx: O.beatpad.fx };
+    O.beatpad.setFx('lofi'); o.lofiRouted = O.beatpad.fx === 'lofi'; O.beatpad.setFx('off');
+    O.ui.showView('settings'); document.getElementById('set-rigs').click(); document.querySelectorAll('#rig-list .rig button')[0].click(); await wait(300);
+    o.club = { view: O.ui.view, level: O.mixui.level(), mode: O.decks.decks[0].padMode };
+    return o;
+  });
+  check('SIMPLE shows two knobs per channel and hides the FX unit, headphone cue, nudge and tempo range; everything stays on screen', lv.simple.knobs === 4 && lv.simple.side === 0 && lv.simple.fxu === 0 && lv.simple.range === 0 && lv.simple.inside, lv.simple);
+  check('A lesson shows every control even in SIMPLE, and SIMPLE returns afterwards', lv.lessonShowsAll && lv.backToSimple, lv);
+  check('The SIMPLE / PRO button switches to PRO and the choice is saved', lv.pro.knobs === 10 && lv.pro.saved === '"pro"', lv.pro);
+  check('Rigs: four rigs; the lo-fi rig sets the Dusty Kit, 88 BPM, swing 62 and VINYL on the beat pad', lv.rigs === 4 && lv.lofi.view === 'pads' && lv.lofi.kit === 'dusty' && lv.lofi.bpm === 88 && lv.lofi.swing === 62 && lv.lofi.fx === 'vinyl' && lv.lofiRouted, lv);
+  check('Rigs: club decks opens the Mix tab in PRO with the pads in PAD FX', lv.club.view === 'mix' && lv.club.level === 'pro' && lv.club.mode === 'padfx', lv.club);
   check('Mix: no console errors', page._errors.length === 0, page._errors.slice(0, 3));
 
   // ---------------------------------------------------------------- beat-making lessons
