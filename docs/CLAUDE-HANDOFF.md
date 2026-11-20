@@ -1,4 +1,4 @@
-# ORBIT DJ — Claude handoff (after v4.2.0, 2026-11-20)
+# ORBIT DJ — Claude handoff (after v4.3.0, 2026-11-20)
 
 ## Source of truth
 - This source bundle (`ORBIT-DJ-v2.1.0-source.zip`) replaces earlier bundles and `ORBIT-Arcade-Final-Prototype.zip`.
@@ -32,6 +32,18 @@ Sounds: `python3 tools/make_sounds.py` regenerates `sounds/` and `js/sounds-mani
 - Sound feedback before that: no voice-like or brass sounds, no bright loud hi-hats, clean song intros. See `CLEAN` and `TOPS_LEVEL` in `js/music.js`.
 - v4.0.1 layout fixes have not been confirmed on the phone yet.
 - Tutorial feedback: "starts too fast, pause to let user choose song, then learn what buttons to use and why per DJ controller standards". **Nothing in a teaching flow should start without a tap, and every control gets a what / why tied to real controller layout.** v4.1.0 applies this to the first-run tutorial only; the Mix lessons and beat trainer still run on their own pacing.
+
+## Product direction (owner, 2026-11-20)
+- She personally wants to learn the beat pad, but to sell the idea the product should lean on **gamifying standard two-deck controller mixing**. Treat the Mix tab's lessons, gigs and Club Night as the core game from here; keep the beat pad as the second track.
+- Research note: gamified pad-drumming training is an established product category (Melodics, founded 2014, partnered with Pioneer DJ). One search did not surface an equivalent game for two-deck mixing; that is not proof none exists.
+- Tone she asked for: humour. Most DJs start out messing about at home for their friends; the first venue is that, and the first locked-in streak is the "ohhhh" moment.
+
+## v4.3 live-show scene (js/scene.js)
+- Grunge theme only. `drawHighway()` in ui.js reserves a strip (`bandH`, 20 % of the canvas, 32 to 84 pt, none when the canvas is under 150 pt tall) and calls `O.scene.draw(c, W, H, { top, horizon }, G, reduce)` before the lanes; the highway then gets a 90 % dark surface so the room shows through slightly. `topY` moves down by the strip, so notes travel a shorter distance in this theme.
+- `ROOMS[]`: crib, party, club, stage. `roomFor(G)`: drills → crib; Quick Play by style; otherwise `G.stage`.
+- People react to `G.crowd`, `G.hypeActive` and the beat phase. Speech bubbles via `O.scene.say(text)`; lines live in `QUIPS`.
+- `O.scene.aha()` returns true once per set. `renderHUD()` calls it when the multiplier first reaches 2 and shows the two callouts. `orbitV43Aha` stores that the one-time note was shown.
+- Original art only. Do not add characters, logos or art from band games.
 
 ## v4.2 rigs, SIMPLE / PRO, pad FX
 - Owner brief: act as an expert in current electronic dance music and rap / UK garage production; research what Fred again.., Skepta and similar artists play on; build it in; simple for a beginner, deep enough for someone with mixing history. Research and sources: `docs/RIGS-RESEARCH.md`.

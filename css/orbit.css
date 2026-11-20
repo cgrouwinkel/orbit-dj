@@ -496,6 +496,7 @@ input[type=range]::-moz-range-thumb { width: 22px; height: 30px; border-radius: 
 @media (max-width: 520px) { .school-strip { grid-template-columns: 1fr; } }
 /* v2.2: callouts, HYPE button/meter, tutorial coach */
 .callout { position: absolute; left: 0; right: 0; top: 13%; text-align: center; pointer-events: none; opacity: 0; font: var(--display-style) var(--display-weight) 20px/1 var(--font-display); text-transform: uppercase; letter-spacing: .03em; color: var(--ink); text-shadow: 0 2px 0 rgba(0,0,0,.75), 0 0 14px rgba(0,0,0,.6); }
+.theme-grunge .callout { top: 23%; } .theme-grunge .judgment { top: 37%; } /* clear of the room drawn above the highway */
 .callout.hype { color: var(--hype); } .callout.mult { color: var(--accent); } .callout.streak { color: var(--great); }
 .hype-btn { --fill: 0%; position: absolute; top: 8px; right: 8px; width: 58px; height: 58px; border-radius: 50%; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 0; border: 0; color: var(--muted); touch-action: none;
   background: radial-gradient(closest-side, rgba(8,8,12,.92) 76%, transparent 78%), conic-gradient(var(--hype) var(--fill), rgba(255,255,255,.16) 0); box-shadow: 0 2px 8px rgba(0,0,0,.5); }

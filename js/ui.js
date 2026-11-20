@@ -49,7 +49,13 @@
     $('#hud-acc').textContent = a === null ? '—' : Math.round(a * 100) + '%';
     const st = G.liveStars();
     const mNow = G.multiplier();
-    if (mNow > lastMult && G.state === 'running') callout('×' + mNow + ' MULTIPLIER', 'mult');
+    if (mNow > lastMult && G.state === 'running') {
+      if (mNow === 2 && O.scene && O.scene.aha()) { // the first streak of a set: the room goes "OHHHH", then the call to action
+        callout('OHHHH! THAT’S A BEAT', 'hype');
+        setTimeout(() => { if (G.state === 'running' && G.multiplier() >= 2) callout('HOLD IT: 8 MORE FOR ×3', 'mult'); }, 1500);
+        if (!S.get('orbitV43Aha', false)) { S.set('orbitV43Aha', true); O.toast('That is the moment. Keep the streak going: every 8 hits in a row raises the multiplier.'); }
+      } else callout('×' + mNow + ' MULTIPLIER', 'mult');
+    }
     lastMult = mNow;
     renderHype(); if (tut.on) coachProgress();
     const c = G.counts; $('#ls-perfect').textContent = c.perfect; $('#ls-great').textContent = c.great; $('#ls-good').textContent = c.good; $('#ls-miss').textContent = c.miss; $('#ls-off').textContent = c.off; $('#ls-max').textContent = G.maxCombo;
@@ -91,7 +97,9 @@
     c.setTransform(hw.dpr, 0, 0, hw.dpr, 0, 0);
     c.fillStyle = P.bg; c.fillRect(0, 0, W, H);
     const reduce = O.reducedMotion();
-    const hitY = H - 18, topY = 2, k = 1.6, vy = (topY * (1 + k) - hitY) / k;
+    // Grunge theme: a strip above the highway shows the room you are playing to (js/scene.js). Too short a canvas gets no strip.
+    const sceneOn = !P.aero && !!O.scene, bandH = sceneOn && H - hw.inset >= 150 ? O.clamp((H - hw.inset) * 0.2, 32, 84) : 0;
+    const hitY = H - 18, topY = bandH ? hw.inset + bandH : 2, k = 1.6, vy = (topY * (1 + k) - hitY) / k;
     const yAt = p => vy + (hitY - vy) / (1 + k * p), sAt = p => 1 / (1 + k * p);
     const margin = 4, bw = W - margin * 2, cx = W / 2;
     const xAt = (e, p) => cx + (e / 4 - 0.5) * bw * sAt(p);
@@ -103,6 +111,11 @@
     const midX = (lane, p) => (xAt(lane, p) + xAt(lane + 1, p)) / 2;
     const ell = (x, y, rx, ry) => { c.beginPath(); c.ellipse(x, y, Math.max(0.5, rx), Math.max(0.5, ry), 0, 0, Math.PI * 2); };
 
+    if (sceneOn) {
+      O.scene.draw(c, W, H, { top: hw.inset, horizon: topY }, G, reduce);
+      c.beginPath(); c.moveTo(xAt(0, 1), topY); c.lineTo(xAt(4, 1), topY); c.lineTo(xAt(4, pBottom), H); c.lineTo(xAt(0, pBottom), H); c.closePath();
+      c.fillStyle = 'rgba(9,8,11,.9)'; c.fill(); // the highway surface: dark, with a little of the room showing through
+    }
     // lanes
     for (let i = 0; i < 4; i++) {
       c.beginPath(); c.moveTo(xAt(i, 1), topY); c.lineTo(xAt(i + 1, 1), topY); c.lineTo(xAt(i + 1, pBottom), H); c.lineTo(xAt(i, pBottom), H); c.closePath();

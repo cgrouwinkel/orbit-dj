@@ -1,4 +1,24 @@
-# ORBIT DJ — QA report (v4.2.0)
+# ORBIT DJ — QA report (v4.3.0)
+
+## v4.3.0 automated results (live-show scene)
+
+| Suite | Result |
+|---|---|
+| `tests/qa-v4.js` (new group: Live-show scene, 4 checks) | 49 / 49 |
+| `tests/qa.js` | 112 / 112 |
+| `tests/qa-mix.js` | 84 / 84 |
+| `tests/phone-layout.js` | 10 / 10 screens |
+
+**Date:** 2026-11-20 · **Tested:** the repo root served locally, headless Chrome via Playwright with touch emulation. **Not tested:** Safari/WebKit and any physical phone, including how smoothly the scene draws on an iPhone.
+
+What the new checks cover: each venue maps to its room; the strip above the highway is drawn during a set; the first ×2 of a set produces the OHHHH bubble, the "THAT'S A BEAT" callout and then the call to action; it happens once per set; switching theme mid-set keeps the set running.
+
+Measured in headless Chrome on this machine: about 16.3 to 16.5 ms per frame during a set at 395 × 702 with the scene on (60 fps), up to 19.5 ms at 1024 × 720 on the main stage room. This says nothing about an iPhone.
+
+Reviewed by eye from screenshots at 395 × 702 and 1024 × 720: the crib with a low crowd meter, the OHHHH moment, the club, the main stage, and Cyber Aero unchanged.
+
+The scene shortens the highway by a fifth in the Grunge theme. Timing windows are unchanged; only the distance notes travel on screen is shorter.
+
 
 ## v4.2.0 automated results (rigs, SIMPLE / PRO, pad FX)
 

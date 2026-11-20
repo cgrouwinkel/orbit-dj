@@ -1,5 +1,24 @@
 # ORBIT DJ — Changelog
 
+## v4.3.0 — 2026-11-20 (Grunge Arcade becomes a live show: the crib, the crowd, the OHHHH moment)
+
+Owner request: make the Grunge theme's gameplay background, effects and colour feel like performing live in a band game, except the first gig is your friends on the couch at the crib, with humour, and an "aha" moment when you first find the beat.
+
+### Play screen, Grunge Arcade theme
+- **A room above the highway.** The top fifth of the highway shows who you are playing to, and coloured light spills down both sides. All of it is drawn in code (`js/scene.js`); nothing is taken from any other game.
+  - Venue 1, the crib: three friends on a couch under string lights, posters, a lava lamp, haze in the air, one of them holding a lit one.
+  - House party: six people standing. Underground club and main stage: crowd silhouettes with moving beams.
+  - Tutorial drills and Quick Play pick a room from the song's style.
+- **They react to the crowd meter.** Low: slumped, flat eyes. Middle: nodding on the beat. High or during HYPE: hands up. The lights get brighter as the room warms up and flash on PERFECT hits.
+- **The OHHHH moment.** The first time a set reaches ×2 (eight hits in a row) the room jumps, a speech bubble says OHHHH, the lights flare, and the callout reads "OHHHH! THAT'S A BEAT", followed by the call to action "HOLD IT: 8 MORE FOR ×3". Once per set. The first time ever, a note explains the streak rule.
+- **Heckles and cheers** in speech bubbles: four misses in a row ("is it plugged in?", "pass the aux"), HYPE ("RUN IT BACK!"), long streaks, the end of a set.
+- Callouts and the PERFECT / MISS text sit a little lower in this theme so they clear the room.
+
+### Unchanged
+- Cyber Aero looks as before. It still gets the OHHHH callout and call to action, without the room.
+- With reduced motion on, the room is drawn still.
+- On a very short highway (phone sideways) there is no room strip, only the coloured light.
+
 ## v4.2.0 — 2026-11-20 (rigs: the gear behind garage, grime and rap, with SIMPLE and PRO layouts)
 
 Owner request: research the controllers and devices used by Fred again.., Skepta and artists near them in sound, build those in, and keep it simple for a beginner but well equipped for someone with real mixing history in rap and EDM. Research notes and sources: `docs/RIGS-RESEARCH.md`.

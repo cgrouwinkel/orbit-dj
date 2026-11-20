@@ -227,6 +227,29 @@ function check(name, ok, detail) { results.push({ group: current, name, ok: !!ok
   check('Quick Play charts it from its own drum hits (kick, snare and hat lanes, all on the grid) and plays the file', im.game.ok && im.game.notes > 40 && im.game.lanes.includes('0') && im.game.lanes.includes('1') && im.game.onGrid && im.game.audio && im.game.hits > 5, im.game);
   check('Grid fixes (half / double tempo) and delete work', im.half === 63 && im.double === 126 && im.removed, { half: im.half, double: im.double });
 
+  current = 'Live-show scene';
+  const sc = await page.evaluate(async () => {
+    const O = ORBIT, G = O.game, wait = ms => new Promise(r => setTimeout(r, ms)), o = {};
+    if (G.state !== 'idle') G.stop(); O.ui.setTheme('grunge'); O.ui.showView('play'); G.setCustom(null);
+    o.rooms = [0, 1, 2, 3].map(st => { G.select(st); return O.scene.roomFor(G).id; }).join();
+    G.select(0); G.setDifficulty('easy'); O.engine.unlock(); await O.engine.ensureRunning(); await G.start();
+    const px = () => { const cv = document.getElementById('highway'), c = cv.getContext('2d'), d = c.getImageData(Math.floor(cv.width / 2), Math.floor(cv.height * 0.08), 1, 1).data; return d[0] + d[1] + d[2]; };
+    await wait(400); o.roomDrawn = px() > 40; // the strip above the highway is not the flat background any more
+    const auto = setInterval(() => { if (G.state !== 'running') return; const now = G.songTime(); for (const n of G.notes) { if (n.t > now + 0.01) break; if (!n.done && n.t > now - 0.1) G.tap(n.lane); } }, 8);
+    const t0 = performance.now(); while (G.multiplier() < 2 && performance.now() - t0 < 30000) await wait(50);
+    await wait(250);
+    o.aha = O.scene.state.aha && O.scene.state.bubble && O.scene.state.bubble.text === 'OHHHH' && /THAT.S A BEAT/.test(document.getElementById('callout').textContent);
+    await wait(1700); o.cta = /8 MORE FOR ×3/.test(document.getElementById('callout').textContent);
+    o.onlyOnce = O.scene.aha() === false;
+    O.ui.setTheme('aero'); await wait(200); o.aeroRuns = G.state === 'running'; O.ui.setTheme('grunge'); await wait(100);
+    clearInterval(auto); G.stop();
+    return o;
+  });
+  check('Each venue has its own room: crib, house party, club, main stage', sc.rooms === 'crib,party,club,stage', sc.rooms);
+  check('Grunge theme draws the room above the highway during a set', sc.roomDrawn, sc);
+  check('First ×2 of a set: the room says OHHHH and the callout reads THAT’S A BEAT, then the call to action', sc.aha && sc.cta, sc);
+  check('The OHHHH moment happens once per set; switching theme mid-set keeps the set running', sc.onlyOnce && sc.aeroRuns, sc);
+
   current = 'Career map';
   const cr = await page.evaluate(async () => {
     const O = ORBIT, G = O.game, C = O.ui.career, out = {};
