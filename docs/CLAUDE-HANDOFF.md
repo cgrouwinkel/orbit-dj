@@ -1,4 +1,4 @@
-# ORBIT DJ — Claude handoff (after v4.0.1, 2026-11-19)
+# ORBIT DJ — Claude handoff (after v4.1.0, 2026-11-19)
 
 ## Source of truth
 - This source bundle (`ORBIT-DJ-v2.1.0-source.zip`) replaces earlier bundles and `ORBIT-Arcade-Final-Prototype.zip`.
@@ -31,6 +31,14 @@ Sounds: `python3 tools/make_sounds.py` regenerates `sounds/` and `js/sounds-mani
 - Real page sizes inside iPhone Safari, measured from her screenshots: about **395 × 702 pt upright** and **737 × 287 pt sideways**. Do not test phone layouts at 844 × 390; Safari's bars never leave that much room. `tests/phone-layout.js` checks both real sizes.
 - Sound feedback before that: no voice-like or brass sounds, no bright loud hi-hats, clean song intros. See `CLEAN` and `TOPS_LEVEL` in `js/music.js`.
 - v4.0.1 layout fixes have not been confirmed on the phone yet.
+- Tutorial feedback: "starts too fast, pause to let user choose song, then learn what buttons to use and why per DJ controller standards". **Nothing in a teaching flow should start without a tap, and every control gets a what / why tied to real controller layout.** v4.1.0 applies this to the first-run tutorial only; the Mix lessons and beat trainer still run on their own pacing.
+
+## v4.1 tutorial (ui.js)
+- Flow: `#ov-intro` → `#ov-tutsong` (song list, preview on tap, sets `G.tutSong = { style, bpm, name, id }`) → `#ov-map` (controller map; also opened from Setup with `openMap()`) → `#ov-tutstep` card → drill → next card … → `#ov-tutdone`.
+- `TUT[]` holds each drill's card text (`real`, `why`, `text`) and the lanes to highlight. `MAP[]` holds the nine controller parts; `mapSvg()` draws the diagram (original schematic, no product artwork).
+- `tutCard(i)` shows a card and starts nothing. `tutStep()` starts the drill. On `drill` status `done` the next card opens; there is no auto-advance into a drill.
+- Drills use `G.tutSong` for style and tempo (`G.bpm()`, `G.styleFor()`); at 136 BPM and above `drillRun()` doubles the note spacing and bar count (half-time).
+- Tutorial sheets do not close on a backdrop tap or Escape while `tut.on`.
 
 ## v4.0 additions
 - **Song model (music.js):** `M.song` = `{ key, kit, swaps: { bass, keys, lead, vocal }, mutes, beat: { kit, patterns } }`, applied in `helpers.n` (role by instrument via `ROLE`), `scheduleStep` (kit translation `padIn`, beat-pad drums `beatEvents`) and `chartAt` (`beatChart`). `buildForm` accepts rows `{ sec, bars, drums: 'style' | 'A'..'D' | 'none' }`. `M.start({ song, form, audio })`, `M.chartSet(..., song)`, `M.renderOffline(..., { song, form })`. Intros / mix-ins drop vocal and brass notes; `TOPS_LEVEL` scales hats and percussion.
@@ -66,7 +74,7 @@ Sounds: `python3 tools/make_sounds.py` regenerates `sounds/` and `js/sounds-mani
 - Crowd: `G.crowd` (starts 0.5; per-difficulty `CROWD` table), `G.canFail()`, `finish(true)` → `lastResult.failed`, grade `FAILED`, nothing saved. `G.noFail` is a test hook.
 - Miss feedback: `fx/miss.wav` (rate-limited) + `M.dip()` on per-session dip gains (melody, bass).
 - Drills: `G.DRILLS`, `G.startDrill(id)`, `G.endDrill()`, event `drill` {status: start | pass | retry | done | abort}. Drills run at 88 BPM over `M.start({mode:'bare', click:true})`, never save, never fail, and loop until passed.
-- Tutorial (ui.js): welcome overlay `#ov-intro`, coach strip `#coach`, finish card `#ov-tutdone`; shown when `orbitV22Tutorial` is unset. `O.ui.tutorial`, `O.ui.tutStart()`, `O.ui.tutEnd(done)`.
+- Tutorial (ui.js, reworked in v4.1, see above): welcome overlay `#ov-intro`, coach strip `#coach`, finish card `#ov-tutdone`; shown when `orbitV22Tutorial` is unset. `O.ui.tutorial`, `O.ui.tutStart()`, `O.ui.tutEnd(done)`.
 - Highway: gems, tails, flames and the multiplier dial / crowd meter are drawn in `drawHighway()` / `drawGauges()`; `--hype` theme token.
 - Tests: 103 checks. Playwright's `tap()` waits for the pulsing HYPE button to stop moving, so tests use `dispatchEvent('pointerdown')` on it.
 

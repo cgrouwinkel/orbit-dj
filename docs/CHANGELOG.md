@@ -1,5 +1,23 @@
 # ORBIT DJ — Changelog
 
+## v4.1.0 — 2026-11-19 (self-paced tutorial with a controller map)
+
+Owner feedback on the tutorial: it starts too fast; it should pause to let the player choose a song, then teach which buttons to use and why, by DJ controller standards.
+
+### Tutorial
+- **Nothing starts on its own.** START TUTORIAL no longer launches a drill. Every step waits for a tap.
+- **1 of 3, pick your song.** All seven songs are listed, slowest first. Tapping one plays a short preview. The tutorial continues only after USE THIS SONG.
+- **2 of 3, the controller.** A diagram of a standard two-deck controller with nine numbered controls: jog wheel, CUE + PLAY / PAUSE, tempo fader + SYNC, performance pads, TRIM + 3-band EQ, filter, headphone cue, channel faders, crossfader. Each one shows where it sits, what it does, why DJs use it, and where the same control is in ORBIT.
+- **3 of 3, five drills.** Each drill opens on a card: what the control is on a real controller, why it matters, and what to do. The drill starts on TRY IT with a four-beat count. After a pass, the next card appears and waits. BACK goes to the previous card, the map, or the song list.
+- Drills play over the chosen song (its bass and melody, with a click) instead of a bare metronome. Songs at 140 BPM run their drills half-time, so the notes are no faster than on a 70 BPM song.
+- The pad used in a drill pulses.
+- The finish card's button plays the chosen song as a Rookie Quick Play set.
+- HYPE is described as ORBIT's own scoring button, not a controller feature.
+- **Setup → Controller map** opens the map at any time.
+
+### Fixes
+- The sideways-phone tip no longer appears on top of an open sheet.
+
 ## v4.0.1 — 2026-11-19 (iPhone layouts, from the owner's first screenshots on a real iPhone)
 
 The owner tested v4.0.0 on an iPhone and reported that everything is easier to reach with the phone held upright than sideways (iPad is fine both ways). Her screenshots also gave the real page sizes inside Safari: about 395 × 702 pt upright and 737 × 287 pt sideways. Earlier layout tests assumed 844 × 390, which Safari's bars never leave free.

@@ -510,6 +510,29 @@ input[type=range]::-moz-range-thumb { width: 22px; height: 30px; border-radius: 
 .tut-h { margin: 0; font: var(--display-style) var(--display-weight) 30px/1 var(--font-display); text-transform: uppercase; }
 .tut-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 7px; text-align: left; font: 600 13px/1.4 var(--font-ui); color: var(--muted); }
 .tut-list b { color: var(--ink); }
+.sheet.sheet-tut { width: min(560px, 100%); display: flex; flex-direction: column; gap: 9px; text-align: left; }
+.sheet-tut .tut-h { font-size: 26px; padding-right: 40px; } .sheet-tut .note { margin: 0; }
+.sheet-tut .sheet-actions { position: sticky; bottom: -18px; margin: 4px -18px -18px; padding: 10px 18px; background: inherit; border-top: 1px solid var(--line-soft); align-items: center; }
+.sheet-tut .sheet-actions .link-btn { margin-right: auto; padding: 10px 4px; font-size: 12px; }
+.sheet.sheet-map { width: min(780px, 100%); }
+.map-grid { display: grid; gap: 10px; }
+.map-svg svg { display: block; width: 100%; max-width: 440px; height: auto; margin: 0 auto; }
+.map-body { fill: rgba(255,255,255,.03); stroke: var(--line); stroke-width: 1; }
+.map-part { cursor: pointer; } .map-part > rect, .map-part > circle { fill: rgba(255,255,255,.07); stroke: var(--muted); stroke-width: 1; }
+.map-part > .map-badge { fill: var(--bg); stroke: var(--muted); } .map-num { font: 800 8.5px var(--font-ui); fill: var(--ink); pointer-events: none; }
+.map-part.is-on > rect, .map-part.is-on > circle { fill: var(--accent); fill-opacity: .32; stroke: var(--accent); stroke-width: 1.8; }
+.map-part.is-on > .map-badge { fill: var(--accent); fill-opacity: 1; } .map-part.is-on .map-num { fill: var(--accent-ink); }
+.map-nav { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 8px; align-items: center; }
+.map-nav b { text-align: center; font: 800 13px/1.2 var(--font-ui); letter-spacing: .08em; } .map-nav .btn { min-height: 40px; font-size: 20px; padding: 0; }
+.map-dl { margin: 0; display: grid; gap: 2px; } .map-dl dt { margin-top: 7px; font: 800 9.5px/1.2 var(--font-ui); letter-spacing: .16em; color: var(--accent); }
+.map-dl dd { margin: 0; font: 600 13px/1.42 var(--font-ui); color: var(--ink); }
+#tutsong-list .track-row.is-on { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+.lane-pad.is-teach { animation: teach .9s ease-in-out infinite alternate; }
+@keyframes teach { from { box-shadow: 0 0 0 2px var(--c, var(--accent)); } to { box-shadow: 0 0 0 4px var(--c, var(--accent)), 0 0 22px var(--c, var(--accent)); } }
+@media (orientation: landscape) { .map-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); align-items: start; } }
+@media (orientation: landscape) and (max-height: 340px) { .map-grid { grid-template-columns: auto minmax(0, 1fr); } .map-svg svg { width: auto; height: 128px; max-width: none; } .sheet-map > .note { display: none; } .map-nav .btn { min-height: 32px; }
+  .sheet.sheet-tut { gap: 6px; padding: 12px 14px; } .sheet-tut .tut-h { font-size: 20px; } .sheet-tut .sheet-actions { bottom: -12px; margin: 2px -14px -12px; padding: 7px 14px; } .map-dl dd { font-size: 12px; } .map-dl dt { margin-top: 4px; } }
+@media (prefers-reduced-motion: reduce) { .lane-pad.is-teach { animation: none; outline: 3px solid var(--c, var(--accent)); outline-offset: 1px; } }
 .res-title { text-wrap: balance; }
 
 .lane-pads { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; height: clamp(56px, 17vh, 100px); flex: none; touch-action: none; }

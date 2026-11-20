@@ -1,4 +1,27 @@
-# ORBIT DJ — QA report (v4.0.1)
+# ORBIT DJ — QA report (v4.1.0)
+
+## v4.1.0 automated results (self-paced tutorial)
+
+| Suite | Result |
+|---|---|
+| `tests/qa.js` (rhythm game, audio, beat pad, tutorial) | 112 / 112 (tutorial group: 18 checks) |
+| `tests/qa-v4.js` | 45 / 45 |
+| `tests/qa-mix.js` | 72 / 72 |
+| `tests/phone-layout.js` | 10 / 10 screens |
+
+**Date:** 2026-11-19 · **Tested:** the repo root served locally, headless Chrome via Playwright with touch emulation. **Not tested:** Safari/WebKit, any physical phone, and whether a person finds the new pacing right.
+
+What the tutorial checks cover:
+- START TUTORIAL opens the song list with nothing playing; the continue button is disabled until a song is chosen; tapping a song previews it.
+- The controller map shows nine controls, each with where / what / why / in ORBIT; tapping the diagram selects a control.
+- Every drill opens on a card and nothing starts for at least 3 s without a tap; after each pass the next card is up with no drill and no music.
+- Drills play over the chosen song; a 140 BPM song runs half-time.
+- The finish button plays the chosen song on Rookie; skip, back and Setup → Controller map behave.
+
+Also walked through by script at 395 × 702 and 737 × 287 (the owner's real iPhone page sizes) with a slow and a fast song: every sheet keeps its buttons on screen, and long sheets scroll inside themselves. Song list, map, first card and first drill were reviewed by eye from screenshots.
+
+Not verified: the controller descriptions were written from general knowledge of common two-deck controllers and were not checked against a specific manual.
+
 
 ## v4.0.1 automated results (phone layouts)
 

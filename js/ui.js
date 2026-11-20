@@ -5,7 +5,7 @@
   const LANE_KEYS = ['f', 'j', 'k', 'l'], PAD_KEYS = 'zxcvasdfqwer1234'; // MPC layout: bottom row = pads 1-4
   let view = 'play';
   let travel = Number(S.get('orbitV2Speed', 2.2)) || 2.2;
-  const tut = { on: false, i: 0 };
+  const tut = { on: false, i: 0, preview: false };
 
   // ---------- small helpers ----------
   const fmtScore = n => String(n).padStart(6, '0');
@@ -884,18 +884,81 @@
     try { if (el._return) el._return.focus({ preventScroll: true }); } catch (e) {}
   }
   $$('.overlay').forEach(ov => {
-    ov.addEventListener('click', e => { if (e.target.closest('[data-close]')) closeOverlay(ov.id); else if (e.target === ov && ov.id !== 'ov-audio' && ov.id !== 'ov-intro') closeOverlay(ov.id); });
+    ov.addEventListener('click', e => { if (e.target.closest('[data-close]')) closeOverlay(ov.id); else if (e.target === ov && !['ov-audio', 'ov-intro', 'ov-tutsong', 'ov-tutstep'].includes(ov.id) && !(ov.id === 'ov-map' && tut.on)) closeOverlay(ov.id); });
   });
 
-  // ---------- first-run tutorial: five short hands-on drills ----------
+  // ---------- tutorial: self-paced. Pick a song, tour the controller, then five drills that each wait for a tap ----------
   const TUT = [
-    { id: 'kick', title: 'KICK', text: 'Notes slide down the lanes. When one lands on the ring, tap the KICK pad (or tap the lane itself).', goal: 'kicks' },
-    { id: 'snare', title: 'SNARE', text: 'Same move, next lane. Snares land on beats 2 and 4. Listen for the tick and tap with it.', goal: 'snares' },
-    { id: 'beat', title: 'FULL BEAT', text: 'Now both hands: kick, snare, then hi-hats. Every 8 hits in a row raises your multiplier, up to ×4.', goal: 'notes' },
-    { id: 'hold', title: 'HOLD NOTES', text: 'A note with a tail is a hold. Tap it and keep your finger down until the tail runs out.', goal: 'hold finished' },
-    { id: 'hype', title: 'HYPE', text: 'Glowing notes charge HYPE. Hit a whole glowing run, then tap the round HYPE button for double points.', goal: 'HYPE fired' }
+    { id: 'kick', title: 'PADS: KICK', goal: 'kicks', lanes: [0],
+      real: 'The eight rubber pads under each jog wheel. In sampler mode a pad plays its sound the instant you press it.',
+      why: 'The kick drum marks the beat. DJs count kicks to find beat 1, and every mix starts from beat 1.',
+      text: 'Notes slide down the lanes. When one lands on the ring, tap the KICK pad (or the lane itself).' },
+    { id: 'snare', title: 'PADS: SNARE', goal: 'snares', lanes: [1],
+      real: 'The next pad in the same bank. Pads sit side by side so two fingers can trade kick and snare. That is finger drumming.',
+      why: 'The snare answers the kick. Kick, snare, kick, snare is the count that beatmatching relies on.',
+      text: 'Same move, next lane. Listen for the tick and tap the SNARE pad with it.' },
+    { id: 'beat', title: 'FULL BEAT + HI-HAT', goal: 'notes', lanes: [0, 1, 2],
+      real: 'Three pads in play at once: kick, snare, hi-hat. On real pads this is drumming live over a running track.',
+      why: 'Music moves in bars of four beats and phrases of eight bars. DJs time every move to the start of one, so a steady pattern is the core skill.',
+      text: 'Kick, snare, then hi-hats in between. Every 8 hits in a row raises your multiplier, up to ×4.' },
+    { id: 'hold', title: 'HOLD: MOMENTARY PADS', goal: 'hold finished', lanes: [3],
+      real: 'Some pad modes only work while the pad is down. A loop roll repeats a slice and a pad effect runs until you let go.',
+      why: 'Holding for an exact number of beats and releasing on the beat is how a roll or an echo ends cleanly into the next bar.',
+      text: 'A note with a tail is a hold. Tap it on the FX pad and keep your finger down until the tail runs out.' },
+    { id: 'hype', title: 'HYPE: SAVE IT FOR THE PEAK', goal: 'HYPE fired', lanes: [0, 1],
+      real: 'HYPE is ORBIT’s own scoring button; no controller has one. The nearest real control is the FX ON button in the effects section.',
+      why: 'DJs keep effects for the big moment so they still mean something. Same rule here: charge it, then fire it.',
+      text: 'Glowing notes charge HYPE. Hit a whole glowing run, then tap the round HYPE button for double points.' }
   ];
+  // Standard two-deck controller layout. `orbit` says where the same control lives in this app.
+  const MAP = [
+    { id: 'jog', name: 'JOG WHEEL', where: 'The big round platter on each deck.', what: 'Turning it nudges the track slightly ahead or behind. Touching the top surface scratches.', why: 'It is how you line two tracks up by hand when their beats drift apart.', orbit: 'Mix tab: drag the platter on either deck.' },
+    { id: 'transport', name: 'CUE + PLAY / PAUSE', where: 'Two large buttons at the bottom-left of each deck.', what: 'CUE marks a start point and jumps back to it. PLAY / PAUSE starts and stops the deck.', why: 'Set the cue on the first beat, then press PLAY on the beat so the new track lands in time.', orbit: 'Mix tab: CUE and the play button under each platter.' },
+    { id: 'tempo', name: 'TEMPO FADER + SYNC', where: 'A long fader on the outer edge of each deck, with a SYNC button nearby.', what: 'The fader speeds the track up or slows it down. SYNC matches it to the other deck for you.', why: 'Two tracks only blend cleanly at the same tempo. Matching them is called beatmatching.', orbit: 'Mix tab: the fader beside each platter, plus SYNC.' },
+    { id: 'pads', name: 'PERFORMANCE PADS', where: 'Eight rubber pads under each jog wheel, with mode buttons above them.', what: 'Hot Cue jumps to a marked spot. Loop and Roll repeat a section. Sampler fires one-shot sounds.', why: 'They let you rearrange a track live instead of only letting it play.', orbit: 'Play tab: KICK, SNARE, HAT and FX are sampler pads. Mix tab: PADS on each deck.' },
+    { id: 'eq', name: 'TRIM + 3-BAND EQ', where: 'The top four knobs of each mixer channel: TRIM (gain), HI, MID, LOW.', what: 'TRIM sets how loud a track arrives. HI, MID and LOW turn treble, middle and bass up or down.', why: 'Match the level of two tracks, and cut the bass on one so two basslines never play together.', orbit: 'Mix tab: GAIN, HI, MID and LOW on each side of the mixer.' },
+    { id: 'filter', name: 'FILTER', where: 'One knob per channel, under the EQ.', what: 'Turned left it removes the highs; turned right it removes the lows. Centre is off.', why: 'A sweep builds tension before a drop and tucks one track under another.', orbit: 'Mix tab: FILTER on each channel. Play tab: opens at Main Stage.' },
+    { id: 'cue', name: 'HEADPHONE CUE', where: 'A small button on each channel, above its fader.', what: 'Sends that channel to your headphones only, even with its fader down.', why: 'You line up the next track in private before the crowd hears it.', orbit: 'Mix tab: the headphone buttons A and B, and SPLIT.' },
+    { id: 'fader', name: 'CHANNEL FADERS', where: 'The two vertical faders in the middle of the mixer.', what: 'Each one sets how loud its deck is in the speakers.', why: 'Bring the next track in gradually over a phrase instead of all at once.', orbit: 'Mix tab: the tall faders beside the level meters.' },
+    { id: 'xf', name: 'CROSSFADER', where: 'The horizontal fader at the bottom centre.', what: 'Left plays deck A, right plays deck B, centre plays both.', why: 'Fast cuts between decks, and the fader hand when scratching.', orbit: 'Mix tab: A to B along the bottom. On the Play tab it blends the melody and bass layers of one song, not two decks.' }
+  ];
+  const mapSvg = () => {
+    const r = (x, y, w, h, rx) => '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" rx="' + (rx || 2) + '"/>', ci = (x, y, rad) => '<circle cx="' + x + '" cy="' + y + '" r="' + rad + '"/>';
+    const both = f => f(0) + f(194), chans = f => f(143) + f(177), shapes = {
+      jog: both(d => ci(54 + d, 54, 32) + ci(54 + d, 54, 9)), transport: both(d => r(10 + d, 108, 16, 22) + r(10 + d, 134, 16, 22)),
+      tempo: both(d => r(102 + d, 22, 6, 66, 3) + r(98 + d, 48, 14, 9)), pads: both(d => [0, 1, 2, 3].map(i => r(32 + d + i * 19, 108, 16, 22) + r(32 + d + i * 19, 134, 16, 22)).join('')),
+      eq: chans(x => [16, 33, 50, 67].map(y => ci(x, y, 6)).join('')), filter: chans(x => ci(x, 86, 6)), cue: chans(x => r(x - 7, 99, 14, 8)),
+      fader: chans(x => r(x - 2, 114, 4, 30) + r(x - 7, 122, 14, 7)), xf: r(134, 157, 52, 4) + r(154, 152, 12, 14)
+    }, badge = { jog: [54, 54], transport: [18, 119], tempo: [105, 12], pads: [40, 119], eq: [160, 41], filter: [160, 86], cue: [160, 103], fader: [160, 129], xf: [125, 159] };
+    return '<svg viewBox="0 0 320 174" role="img" aria-label="Diagram of a two-deck DJ controller"><rect class="map-body" x="1" y="1" width="318" height="172" rx="10"/><path class="map-body" d="M116 8V166M204 8V166"/>' +
+      MAP.map((m, i) => '<g class="map-part" data-part="' + i + '">' + shapes[m.id] + '<circle class="map-badge" cx="' + badge[m.id][0] + '" cy="' + badge[m.id][1] + '" r="7"/><text class="map-num" x="' + badge[m.id][0] + '" y="' + (badge[m.id][1] + 3) + '" text-anchor="middle">' + (i + 1) + '</text></g>').join('') + '</svg>';
+  };
+  let mapAt = 0;
+  function mapShow(i) {
+    mapAt = (i + MAP.length) % MAP.length; const m = MAP[mapAt];
+    $('#map-name').textContent = (mapAt + 1) + ' / ' + MAP.length + ' · ' + m.name;
+    $('#map-where').textContent = m.where; $('#map-what').textContent = m.what; $('#map-why').textContent = m.why; $('#map-orbit').textContent = m.orbit;
+    $$('#map-svg .map-part').forEach(g => g.classList.toggle('is-on', Number(g.dataset.part) === mapAt));
+  }
+  function openMap() {
+    if (!$('#map-svg').firstChild) $('#map-svg').innerHTML = mapSvg();
+    const t = tut.on;
+    $('#map-eyebrow').textContent = t ? 'TUTORIAL · 2 OF 3 · THE CONTROLLER' : 'CONTROLLER MAP';
+    $('#map-x').hidden = t; $('#map-back').hidden = !t; $('#map-skip').hidden = !t;
+    $('#map-go').querySelector('span').textContent = t ? 'TRY THE PADS' : 'GOT IT';
+    $('#map-note').textContent = t ? 'The standard two-deck layout. The drills use the pads (4). Tap any number to see the rest.' : 'The standard two-deck layout. Tap a number or use the arrows.';
+    mapShow(t ? 3 : mapAt); // in the tutorial, open on the pads: they are what the drills use
+    openOverlay('ov-map');
+  }
+  $('#map-svg').addEventListener('click', e => { const g = e.target.closest('.map-part'); if (g) mapShow(Number(g.dataset.part)); });
+  $('#map-prev').addEventListener('click', () => mapShow(mapAt - 1));
+  $('#map-next').addEventListener('click', () => mapShow(mapAt + 1));
+  $('#map-go').addEventListener('click', () => { closeOverlay('ov-map'); if (tut.on) tutCard(0); });
+  $('#map-back').addEventListener('click', () => { closeOverlay('ov-map'); if (tut.on) tutSongOpen(); });
+  $('#set-map').addEventListener('click', openMap);
+
   const coach = $('#coach');
+  const teach = lanes => $$('#lane-pads .lane-pad').forEach((b, i) => b.classList.toggle('is-teach', !!lanes && lanes.includes(i)));
   function coachShow(on) {
     coach.hidden = !on;
     document.documentElement.classList.toggle('is-tutorial', on);
@@ -916,8 +979,55 @@
     if ($('#coach-count').textContent !== txt) $('#coach-count').textContent = txt;
     if (d && d.id === 'hype' && G.hypeReady() && !coach.dataset.hint) { coach.dataset.hint = '1'; $('#coach-text').textContent = 'HYPE is charged. Tap the round HYPE button now!'; }
   }
+  // 1 of 3: the song. Rows preview on tap; nothing moves on until the player confirms.
+  let tutPick = null;
+  const tutSongs = () => O.songs.builtin().slice().sort((a, b) => a.bpm - b.bpm);
+  function tutStopPreview() { if (tut.preview) { tut.preview = false; M.stop(); } }
+  function tutSongRender() {
+    $('#tutsong-list').replaceChildren(...tutSongs().map(c => {
+      const b = document.createElement('button'); b.className = 'track-row' + (tutPick && tutPick.id === c.id ? ' is-on' : '');
+      b.innerHTML = '<b></b><span>' + M.STYLES[c.style].label + ' · ' + c.bpm + ' BPM</span><em>' + (tutPick && tutPick.id === c.id ? (tut.preview ? 'PLAYING' : 'CHOSEN') : c.bpm < 100 ? 'SLOW' : c.bpm < 136 ? 'MEDIUM' : 'FAST') + '</em>';
+      b.firstChild.textContent = c.name;
+      b.addEventListener('click', () => tutSongPick(c));
+      return b;
+    }));
+    const go = $('#tutsong-go'); go.disabled = !tutPick; go.querySelector('span').textContent = tutPick ? 'USE THIS SONG' : 'CHOOSE A SONG';
+  }
+  async function tutSongPick(c) {
+    tutPick = c; tutStopPreview(); tutSongRender();
+    E.unlock();
+    if (!(await E.ensureRunning())) return; // chosen, just not audible yet; the next tap will play it
+    if (G.state === 'running' || G.state === 'paused') G.stop(); G.stopDemo(); if (BP.playing) BP.stop(); O.decks.stopAll();
+    await O.assets.ensure(M.assetsFor(c.style), 8000);
+    if (tutPick !== c || $('#ov-tutsong').hidden) return;
+    const t0 = E.ctx.currentTime + 0.12;
+    M.start({ style: c.style, bpm: c.bpm, origin: t0, mode: 'jam', endAt: t0 + (c.bpm >= 120 ? 8 : 4) * 240 / c.bpm - 0.01 });
+    tut.preview = true; tutSongRender();
+  }
+  O.on('music', m => { if (tut.preview && !m.playing) { tut.preview = false; if (!$('#ov-tutsong').hidden) tutSongRender(); } });
+  function tutSongOpen() { tutSongRender(); openOverlay('ov-tutsong'); }
+  $('#tutsong-go').addEventListener('click', () => {
+    if (!tutPick) return;
+    tutStopPreview();
+    G.tutSong = { style: tutPick.style, bpm: tutPick.bpm, name: tutPick.name, id: tutPick.id };
+    closeOverlay('ov-tutsong'); openMap();
+  });
+  // 3 of 3: each drill opens on a card (what the control is on real gear, why it matters, what to do) and waits.
+  function tutCard(i) {
+    if (G.drill) G.endDrill();
+    tut.i = i; const st = TUT[i];
+    coachShow(false); teach(null);
+    $('#tutstep-eyebrow').textContent = 'TUTORIAL · 3 OF 3 · DRILL ' + (i + 1) + ' OF ' + TUT.length + (G.tutSong ? ' · ' + G.tutSong.name.toUpperCase() : '');
+    $('#tutstep-title').textContent = st.title;
+    $('#tutstep-real').textContent = st.real; $('#tutstep-why').textContent = st.why; $('#tutstep-now').textContent = st.text;
+    stageKey = ''; updateStageMsg();
+    openOverlay('ov-tutstep');
+  }
+  $('#tutstep-go').addEventListener('click', () => { closeOverlay('ov-tutstep'); tutStep(); });
+  $('#tutstep-back').addEventListener('click', () => { closeOverlay('ov-tutstep'); if (tut.i > 0) tutCard(tut.i - 1); else openMap(); });
   async function tutStep() {
     delete coach.dataset.hint;
+    teach(TUT[tut.i].lanes);
     coachRender('');
     await G.startDrill(TUT[tut.i].id);
     if (tut.on) { hw.inset = coach.offsetHeight + 2; coachProgress(); wake(); }
@@ -925,14 +1035,17 @@
   function tutStart() {
     S.set('orbitV2Intro', true);
     closeOverlay('ov-intro');
+    if (G.state === 'running' || G.state === 'paused') G.stop();
     if (view !== 'play') showView('play');
-    tut.on = true; tut.i = 0;
+    tut.on = true; tut.i = 0; tutPick = null; G.tutSong = null;
     stageKey = '';
-    tutStep();
+    tutSongOpen();
   }
   function tutEnd(done) {
     const was = tut.on; tut.on = false;
-    coachShow(false);
+    tutStopPreview();
+    ['ov-tutsong', 'ov-map', 'ov-tutstep'].forEach(closeOverlay);
+    coachShow(false); teach(null);
     if (G.drill) G.endDrill();
     if (done) S.set('orbitV22Tutorial', true);
     stageKey = ''; updateStageMsg(); wake();
@@ -940,20 +1053,26 @@
   }
   O.on('drill', d => {
     if (!tut.on) return;
-    if (d.status === 'pass') coachRender('NICE! ' + (tut.i < TUT.length - 1 ? 'Next up: ' + TUT[tut.i + 1].title + '.' : 'That’s everything.'));
+    if (d.status === 'pass') coachRender('NICE! ' + (tut.i < TUT.length - 1 ? 'Next: ' + TUT[tut.i + 1].title + ', when you are ready.' : 'That’s everything.'));
     else if (d.status === 'retry') coachRender(d.id === 'hold' ? 'Again: tap the note, then keep holding until its tail is gone.' : d.id === 'hype' ? 'Again: hit every glowing note in a run, then tap HYPE.' : 'One more time. Tap right as the note lands on the ring.');
     else if (d.status === 'done') {
-      tut.i++;
-      if (tut.i < TUT.length) tutStep();
-      else { tutEnd(true); openOverlay('ov-tutdone'); }
+      if (tut.i + 1 < TUT.length) tutCard(tut.i + 1); // stops here until the player taps TRY IT
+      else {
+        tutEnd(true);
+        $('#tut-play-label').textContent = G.tutSong ? 'PLAY ' + G.tutSong.name.toUpperCase() : 'PLAY YOUR FIRST SET';
+        openOverlay('ov-tutdone');
+      }
     } else if (d.status === 'abort') { tutEnd(false); O.toast('Tutorial stopped. Replay it from Setup.'); }
   });
-  $('#coach-skip').addEventListener('click', () => { tutEnd(true); O.toast('Tutorial skipped. Replay it any time from Setup.'); });
+  const tutSkip = () => { tutEnd(true); O.toast('Tutorial skipped. Replay it any time from Setup.'); };
+  $('#coach-skip').addEventListener('click', tutSkip);
+  $$('[data-tut-skip]').forEach(b => b.addEventListener('click', tutSkip));
   $('#intro-play').addEventListener('click', tutStart);
   $('#intro-skip').addEventListener('click', () => { S.set('orbitV2Intro', true); S.set('orbitV22Tutorial', true); closeOverlay('ov-intro'); });
   $('#tut-play').addEventListener('click', () => {
     closeOverlay('ov-tutdone');
-    if (G.stage !== 0) G.select(0);
+    const mine = G.tutSong && O.songs.builtin().find(c => c.id === G.tutSong.id);
+    if (mine) G.setCustom(mine); else if (G.stage !== 0) G.select(0); // the song they learned on, as a Quick Play set
     G.setDifficulty('easy');
     G.start();
   });
@@ -1069,7 +1188,7 @@
     if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
     const ae = document.activeElement, tag = ae && ae.tagName;
     if (tag === 'SELECT' || tag === 'TEXTAREA' || (tag === 'INPUT' && ae.type !== 'range' && ae.type !== 'checkbox')) return;
-    if (ovStack.length) { if (e.key === 'Escape') { const top = ovStack[ovStack.length - 1]; if (top !== 'ov-audio') closeOverlay(top); } return; }
+    if (ovStack.length) { if (e.key === 'Escape') { const top = ovStack[ovStack.length - 1]; if (top !== 'ov-audio' && !(tut.on && /^ov-(tutsong|tutstep|map)$/.test(top))) closeOverlay(top); } return; }
     const k = e.key.toLowerCase();
     if (view === 'play') {
       const lane = LANE_KEYS.indexOf(k);

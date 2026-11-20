@@ -98,8 +98,9 @@
 
   // Quick Play: G.custom = { id, name, style, bpm, rows (song form), song (music.js song settings) } replaces the venue's song. Nothing is saved to the career.
   G.custom = null;
-  G.bpm = () => (G.drill ? 88 : G.custom ? G.custom.bpm : VENUES[G.stage].bpm);
-  G.styleFor = () => (G.drill ? 'boombap' : G.custom ? M.resolve(G.custom.style) : M.resolve(G.styleChoice === 'auto' ? VENUES[G.stage].style : G.styleChoice));
+  // Tutorial drills run over the song the player picked (G.tutSong = { style, bpm, name }); without one they use boom bap at 88.
+  G.bpm = () => (G.drill ? (G.tutSong ? G.tutSong.bpm : 88) : G.custom ? G.custom.bpm : VENUES[G.stage].bpm);
+  G.styleFor = () => (G.drill ? (G.tutSong ? M.resolve(G.tutSong.style) : 'boombap') : G.custom ? M.resolve(G.custom.style) : M.resolve(G.styleChoice === 'auto' ? VENUES[G.stage].style : G.styleChoice));
   G.form = () => (G.custom && G.custom.rows ? G.custom.rows : G.custom && G.custom.bars ? G.custom.bars : barsFor(G.bpm()));
   G.formBars = () => { const f = G.form(); return Array.isArray(f) ? f.reduce((n, r) => n + r.bars, 0) : f; };
   G.songCfg = () => (G.custom && !G.drill ? G.custom.song || null : null);
@@ -383,9 +384,9 @@
 
   // ---------- tutorial drills ----------
   function drillRun() {
-    const d = G.drill, beat = 60 / 88;
-    G.bars = d.bars;
-    G.notes = d.notes(beat, Math.max(2.7, 4 * beat + 0.3)).sort((a, b) => a.t - b.t);
+    const beat = 60 / G.bpm(), half = G.bpm() >= 136 ? 2 : 1, d = G.drill; // 140 BPM songs are half-time: kick on 1, snare on 3
+    G.bars = d.bars * half;
+    G.notes = d.notes(beat * half, Math.max(2.7, 4 * beat + 0.3)).sort((a, b) => a.t - b.t);
     const keep = d.id === 'hype' && d.tries ? G.hype : 0; // a charged meter survives a retry
     resetRun();
     G.hype = keep;
@@ -401,7 +402,7 @@
     if (!ok) { O.emit('needs-audio', 'drill'); return false; }
     G.stop(true);
     G.drill = Object.assign({ id, tries: 0 }, DRILLS[id]);
-    await O.assets.ensure(M.assetsFor('boombap').concat(FX.map(O.assets.fxPath)), 2500);
+    await O.assets.ensure(M.assetsFor(G.styleFor()).concat(FX.map(O.assets.fxPath)), G.tutSong ? 6000 : 2500);
     if (!G.drill || G.drill.id !== id) return false; // tutorial was closed while loading
     drillRun();
     O.emit('drill', { id, status: 'start' });

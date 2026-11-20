@@ -344,7 +344,7 @@
   };
   // Owner's iPhone test: sideways inside Safari there is very little height, upright is much easier to use. Say so once.
   const shortLandscape = window.matchMedia('(orientation: landscape) and (max-height: 340px)');
-  const rotateTip = () => { if (shortLandscape.matches && !O.store.get('orbitV4RotateTip', false)) { O.store.set('orbitV4RotateTip', true); O.toast('Tip: on a phone, ORBIT has more room when you hold it upright.'); } };
+  const rotateTip = () => { if (shortLandscape.matches && !document.querySelector('.overlay:not([hidden])') && !O.store.get('orbitV4RotateTip', false)) { O.store.set('orbitV4RotateTip', true); O.toast('Tip: on a phone, ORBIT has more room when you hold it upright.'); } };
   setTimeout(rotateTip, 1500); window.addEventListener('orientationchange', () => setTimeout(rotateTip, 600));
   window.addEventListener('resize', () => { if (ui.view === 'mix') requestAnimationFrame(() => { sizeWave(); wake(); }); });
   window.addEventListener('orientationchange', () => setTimeout(() => { if (ui.view === 'mix') { sizeWave(); wake(); } }, 260));

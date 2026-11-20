@@ -392,6 +392,7 @@
           <h2>App</h2>
           <p class="note">Best on iPhone: hold the phone upright. Safari → Share → <b>Add to Home Screen</b> gives ORBIT the whole screen.</p>
           <button class="btn" id="set-intro">Replay tutorial</button>
+          <button class="btn" id="set-map">Controller map</button>
           <button class="btn btn-danger" id="set-reset">Reset career progress</button>
           <p class="note" id="version-line"></p>
         </div>
@@ -404,10 +405,47 @@
     <div class="sheet sheet-intro">
       <div class="intro-logo" id="intro-title"><span class="logo big">ORBIT</span><span class="logo-tag big">DJ</span></div>
       <p class="intro-line">Learn to DJ by playing a game.</p>
-      <ol class="intro-steps"><li>Tap notes on the beat</li><li>Hold the long ones</li><li>Fire HYPE for double points</li></ol>
+      <ol class="intro-steps"><li>Pick your song</li><li>See what each control is for</li><li>Try five short drills</li></ol>
       <button class="btn-start" id="intro-play"><svg><use href="#i-play"/></svg><span>START TUTORIAL</span></button>
-      <p class="intro-small"><svg><use href="#i-headphones"/></svg>Takes about a minute. Sound on; headphones help. On a phone, hold it upright.</p>
+      <p class="intro-small"><svg><use href="#i-headphones"/></svg>Goes at your pace: nothing plays until you tap. Sound on; headphones help. On a phone, hold it upright.</p>
       <button class="link-btn" id="intro-skip">Skip the tutorial</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="ov-tutsong" role="dialog" aria-modal="true" aria-labelledby="tutsong-title" hidden>
+    <div class="sheet sheet-tut">
+      <div class="eyebrow">TUTORIAL · 1 OF 3 · YOUR SONG</div>
+      <h2 class="tut-h" id="tutsong-title">PICK YOUR SONG</h2>
+      <p class="note">Tap a song to hear it. Take your time: nothing else starts until you choose. You will learn the controls over this song.</p>
+      <div class="track-list" id="tutsong-list"></div>
+      <div class="sheet-actions"><button class="link-btn" data-tut-skip>Skip the tutorial</button><button class="btn-start small" id="tutsong-go" disabled><span>CHOOSE A SONG</span></button></div>
+    </div>
+  </div>
+
+  <div class="overlay" id="ov-map" role="dialog" aria-modal="true" aria-labelledby="map-title" hidden>
+    <div class="sheet sheet-tut sheet-map">
+      <button class="icon-btn sheet-x" id="map-x" data-close aria-label="Close"><svg><use href="#i-x"/></svg></button>
+      <div class="eyebrow" id="map-eyebrow">CONTROLLER MAP</div>
+      <h2 class="tut-h" id="map-title">WHAT EACH CONTROL IS FOR</h2>
+      <p class="note" id="map-note"></p>
+      <div class="map-grid">
+        <div id="map-svg" class="map-svg" aria-hidden="true"></div>
+        <div class="map-info">
+          <div class="map-nav"><button class="btn btn-small" id="map-prev" aria-label="Previous control">‹</button><b id="map-name" aria-live="polite"></b><button class="btn btn-small" id="map-next" aria-label="Next control">›</button></div>
+          <dl class="map-dl"><dt>WHERE IT IS</dt><dd id="map-where"></dd><dt>WHAT IT DOES</dt><dd id="map-what"></dd><dt>WHY DJS USE IT</dt><dd id="map-why"></dd><dt>IN ORBIT</dt><dd id="map-orbit"></dd></dl>
+        </div>
+      </div>
+      <div class="sheet-actions"><button class="link-btn" id="map-skip" data-tut-skip>Skip the tutorial</button><button class="btn" id="map-back">BACK</button><button class="btn-start small" id="map-go"><span>GOT IT</span></button></div>
+    </div>
+  </div>
+
+  <div class="overlay" id="ov-tutstep" role="dialog" aria-modal="true" aria-labelledby="tutstep-title" hidden>
+    <div class="sheet sheet-tut">
+      <div class="eyebrow" id="tutstep-eyebrow"></div>
+      <h2 class="tut-h" id="tutstep-title"></h2>
+      <dl class="map-dl"><dt>ON A REAL CONTROLLER</dt><dd id="tutstep-real"></dd><dt>WHY IT MATTERS</dt><dd id="tutstep-why"></dd><dt>YOUR TURN</dt><dd id="tutstep-now"></dd></dl>
+      <p class="note">Nothing plays yet. Tap TRY IT and you get a four-beat count before the first note. If you miss, the drill simply repeats.</p>
+      <div class="sheet-actions"><button class="link-btn" data-tut-skip>Skip the tutorial</button><button class="btn" id="tutstep-back">BACK</button><button class="btn-start small" id="tutstep-go"><svg><use href="#i-play"/></svg><span>TRY IT</span></button></div>
     </div>
   </div>
 
@@ -436,9 +474,10 @@
         <li><b>Crowd meter</b> (left of the lanes): hits fill it, misses drain it. On Club and Headliner an empty meter ends the set. Rookie never fails.</li>
         <li><b>Multiplier</b>: every 8 hits in a row adds ×1, up to ×4. A miss resets it.</li>
         <li><b>HYPE</b>: charge it with glowing runs, fire it for double points.</li>
-        <li><b>Mix and Beats tabs</b>: a full two-deck controller with lessons, and a beat pad with its own trainer.</li>
+        <li><b>Mix tab</b>: the full two-deck controller from the map, with lessons for every control. <b>Studio</b>: beat pad and song builder.</li>
+        <li><b>Career tab</b>: venues and levels. The controller map is in Setup any time.</li>
       </ul>
-      <button class="btn-start" id="tut-play"><svg><use href="#i-play"/></svg><span>PLAY YOUR FIRST SET</span></button>
+      <button class="btn-start" id="tut-play"><svg><use href="#i-play"/></svg><span id="tut-play-label">PLAY YOUR FIRST SET</span></button>
       <button class="link-btn" data-close>Look around first</button>
     </div>
   </div>
